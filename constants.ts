@@ -60,16 +60,17 @@ export const AMENITIES_LIST = [
 ];
 
 // Shared images for Suites 1-3
-// These match the 8 specific photos provided by the user
+// Updated with assets from GitHub folder
+// Using absolute path /assets/
 const SUITE_1_3_IMAGES = [
-  '/suite_balcony_view.jpg',      // Hero: Bedroom looking out to patio
-  '/suite_bed_front.jpg',         // Front view with dreamcatcher
-  '/suite_desk_side.jpg',         // Side view with desk area
-  '/suite_bed_detail.jpg',        // Angled/closer view of bed
-  '/suite_decor_skull.jpg',       // Skull decor detail
-  '/suite_art_wave.jpg',          // Wave art frame
-  '/suite_pillow_detail.jpg',     // Pillow textile detail
-  '/suite_toiletries.jpg'         // Shampoo bottles
+  '/assets/123-header.jpg',     // Hero image
+  '/assets/123-2.jpg',
+  '/assets/123-4.jpg',
+  '/assets/123-5.jpg',
+  '/assets/123-cactus.jpg',
+  '/assets/123-pillow.jpg',
+  '/assets/123-skull.jpg',
+  '/assets/123-towel.jpg'
 ];
 
 export const PROPERTIES: Property[] = [
