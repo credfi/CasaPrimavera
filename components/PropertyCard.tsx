@@ -1,6 +1,6 @@
 import React from 'react';
 import { Property } from '../types';
-import { Users, Bed, Home, Star, Sun, Maximize, MinusCircle } from 'lucide-react';
+import { Users, Bed, Home, Star, Sun, Maximize, MinusCircle, ImageOff } from 'lucide-react';
 
 interface PropertyCardProps {
   property: Property;
@@ -16,19 +16,21 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDeta
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error(`Failed to load image for ${property.name}: ${e.currentTarget.src}`);
+    // Fallback to a high-quality tropical placeholder if the custom image fails
     e.currentTarget.src = 'https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
   };
 
   return (
     <div className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-brand-sand">
-      <div className="relative h-64 overflow-hidden">
+      <div className="relative h-64 overflow-hidden bg-gray-100 flex items-center justify-center">
         <img 
           src={property.images[0]} 
           alt={property.name} 
           onError={handleImageError}
           className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-brand-dark">
+        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-brand-dark z-10">
           {property.type}
         </div>
       </div>

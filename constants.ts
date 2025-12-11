@@ -60,17 +60,13 @@ export const AMENITIES_LIST = [
 ];
 
 // Shared images for Suites 1-3
-// Updated with assets from GitHub folder
-// Using absolute path /assets/
+// Using the raw GitHub content URL for permanent access
 const SUITE_1_3_IMAGES = [
-  '/assets/123-header.jpg',     // Hero image
-  '/assets/123-2.jpg',
-  '/assets/123-4.jpg',
-  '/assets/123-5.jpg',
-  '/assets/123-cactus.jpg',
-  '/assets/123-pillow.jpg',
-  '/assets/123-skull.jpg',
-  '/assets/123-towel.jpg'
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/123-header.jpg',
+  // Placeholders for gallery 
+  'https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+  'https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2025&q=80',
+  'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80'
 ];
 
 export const PROPERTIES: Property[] = [
