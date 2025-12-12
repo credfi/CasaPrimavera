@@ -71,9 +71,9 @@ export const AMENITIES_LIST = [
 
 // Shared bathroom images for all suites
 const SHARED_BATHROOM_IMAGES = [
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/bathroom-high%20res-0780.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/bathroom-high%20res-0783.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/bathroom-high%20res-2.jpg'
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/bathroom-high%20res-0780.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/bathroom-high%20res-0783.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/bathroom-high%20res-2.jpg'
 ];
 
 // Shared images for Suites 1-3
@@ -92,27 +92,27 @@ const SUITE_1_3_IMAGES = [
 
 // Shared images for Suites 4, 9
 const SUITE_4_9_IMAGES = [
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/49-header.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/49-2.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/49-3.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/49-4.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/49-pillow.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/49-skull2.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/49-towels.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-header.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-2.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-3.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-4.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-pillow.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-skull2.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-towels.jpg',
   ...SHARED_BATHROOM_IMAGES
 ];
 
 // Shared images for Suites 5, 10
 const SUITE_5_10_IMAGES = [
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-header-5-10.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res--2.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res-.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res-1715.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res-1716.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res-1861.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res-1868.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res-2.jpg',
-  'https://raw.githubusercontent.com/credfi/CasaPrimavera/main/Images/5-10-med%20res-3.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-header-5-10.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res--2.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res-.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res-1715.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res-1716.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res-1861.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res-1868.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res-2.jpg',
+  'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res-3.jpg',
   ...SHARED_BATHROOM_IMAGES
 ];
 

@@ -106,7 +106,6 @@ export const RecommendationsView: React.FC = () => {
                  <div className="space-y-4">
                     <h3 className="font-bold text-xl text-brand-terra border-b border-brand-terra/20 pb-2">Dinner Favorites</h3>
                     <ul className="space-y-4">
-                       <li className="text-gray-600"><span className="font-bold text-gray-900 block">Achara</span>Incredible Thai food. Try the Pad Thai and Penang Curry.</li>
                        <li className="text-gray-600"><span className="font-bold text-gray-900 block">Venezia</span>Great pizza located across the bridge.</li>
                        <li className="text-gray-600"><span className="font-bold text-gray-900 block">El Jackal</span>Fish restaurant beside Venezia. Known for coconut shrimp.</li>
                        <li className="text-gray-600"><span className="font-bold text-gray-900 block">Carbon</span>Top pick for tuna steaks, burgers, and octopus.</li>
@@ -130,7 +129,7 @@ export const RecommendationsView: React.FC = () => {
                     </div>
                     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                       <span className="font-bold block text-gray-900">The Anchor</span>
-                      <span className="text-sm text-gray-500">Trendy breakfast spots (2 locations).</span>
+                      <span className="text-sm text-gray-500">Trendy breakfast spot.</span>
                     </div>
                     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                       <span className="font-bold block text-gray-900">ChocoBanana</span>
@@ -227,7 +226,7 @@ export const RecommendationsView: React.FC = () => {
                   <div>
                     <h4 className="font-bold text-brand-dark">San Pancho Day Trip</h4>
                     <p className="text-sm text-gray-600 mt-2">
-                      The next surf town north. Take a 15 min bus or a scenic jungle/beach walk.
+                      The next surf town north. Take a 20 min bus or a scenic jungle/beach walk.
                     </p>
                   </div>
                </div>
