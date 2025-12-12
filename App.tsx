@@ -7,6 +7,9 @@ import { LocationView } from './components/LocationView';
 import { RecommendationsView } from './components/RecommendationsView';
 import { FAQView } from './components/FAQView';
 import { ContactView } from './components/ContactView';
+import { BookingView } from './components/BookingView';
+import { WhatsAppWidget } from './components/WhatsAppWidget';
+import { ImageGalleryModal } from './components/ImageGalleryModal';
 import { fetchAndParseIcal } from './utils/icalParser';
 import { 
   Calendar as CalendarIcon, 
@@ -26,12 +29,13 @@ import {
   Home,
   Sun,
   Maximize,
-  MinusCircle
+  MinusCircle,
+  Grid
 } from 'lucide-react';
 import { formatDate, isDateInRange, toISODate } from './utils/dateUtils';
 
 // Simple Router implementation
-type View = 'HOME' | 'DETAILS' | 'LOCATION' | 'RECOMMENDATIONS' | 'FAQ' | 'CONTACT';
+type View = 'HOME' | 'DETAILS' | 'LOCATION' | 'RECOMMENDATIONS' | 'FAQ' | 'CONTACT' | 'BOOKING';
 
 function App() {
   const [view, setView] = useState<View>('HOME');
@@ -44,6 +48,10 @@ function App() {
   const [searchDateRange, setSearchDateRange] = useState<DateRange>({ startDate: null, endDate: null });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // Booking Form Date Picker State
+  const [showBookingDatePicker, setShowBookingDatePicker] = useState(false);
+  const bookingDatePickerRef = useRef<HTMLDivElement>(null);
   
   // Active Filter State (What controls the list)
   const [activeFilters, setActiveFilters] = useState({
@@ -55,11 +63,18 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
-  // Handle click outside to close date picker
+  // Gallery Modal State
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
+  // Handle click outside to close date pickers
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
         setShowDatePicker(false);
+      }
+      if (bookingDatePickerRef.current && !bookingDatePickerRef.current.contains(event.target as Node)) {
+        setShowBookingDatePicker(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -175,14 +190,24 @@ function App() {
   };
 
   const handleDetailsDateSelect = (date: Date) => {
+    let newRange = { ...searchDateRange };
+    let isComplete = false;
+
      if (!searchDateRange.startDate || (searchDateRange.startDate && searchDateRange.endDate)) {
-      setSearchDateRange({ startDate: date, endDate: null });
+      newRange = { startDate: date, endDate: null };
     } else {
       if (date < searchDateRange.startDate) {
-        setSearchDateRange({ startDate: date, endDate: searchDateRange.startDate });
+        newRange = { startDate: date, endDate: searchDateRange.startDate };
+        isComplete = true;
       } else {
-        setSearchDateRange({ ...searchDateRange, endDate: date });
+        newRange = { ...searchDateRange, endDate: date };
+        isComplete = true;
       }
+    }
+    setSearchDateRange(newRange);
+    
+    if (isComplete) {
+      setShowBookingDatePicker(false);
     }
   };
 
@@ -224,6 +249,33 @@ function App() {
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src = 'https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
   };
+
+  const openGallery = (index: number = 0) => {
+    setGalleryStartIndex(index);
+    setIsGalleryOpen(true);
+  };
+
+  // Pricing Calculation
+  const getPricing = () => {
+    if (!selectedProperty) return { nights: 0, subtotal: 0, total: 0 };
+    
+    let nights = 0;
+    if (searchDateRange.startDate && searchDateRange.endDate) {
+      const diffTime = Math.abs(searchDateRange.endDate.getTime() - searchDateRange.startDate.getTime());
+      nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    }
+    
+    // Default to at least 1 night for display if they pick the same day, though usually checks are > 0
+    // If no dates selected, show 0
+    
+    return {
+      nights,
+      subtotal: nights * selectedProperty.pricePerNight,
+      total: (nights * selectedProperty.pricePerNight) + 100 // + Cleaning Fee
+    };
+  };
+
+  const pricing = getPricing();
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-brand-dark">
@@ -270,8 +322,11 @@ function App() {
               >
                 FAQ
               </button>
-              <button className="px-5 py-2.5 bg-brand-dark text-white text-sm font-semibold rounded-full hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20">
-                Book Now
+              <button 
+                onClick={() => { setView('BOOKING'); window.scrollTo(0, 0); }}
+                className="px-5 py-2.5 bg-brand-dark text-white text-sm font-semibold rounded-full hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20"
+              >
+                Booking Request
               </button>
             </div>
 
@@ -291,6 +346,7 @@ function App() {
              <button onClick={() => { setView('RECOMMENDATIONS'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Local Guide</button>
              <button onClick={() => { setView('LOCATION'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Location</button>
              <button onClick={() => { setView('FAQ'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">FAQ</button>
+             <button onClick={() => { setView('BOOKING'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Booking Request</button>
              <button onClick={() => { setView('CONTACT'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Contact</button>
           </div>
         )}
@@ -467,33 +523,43 @@ function App() {
         {view === 'CONTACT' && (
           <ContactView />
         )}
+        
+        {view === 'BOOKING' && (
+          <BookingView />
+        )}
 
         {view === 'DETAILS' && selectedProperty && (
           <div className="animate-fade-in pb-20">
             {/* Property Hero */}
-            <div className="relative h-[60vh]">
+            <div 
+              className="relative h-[60vh] cursor-pointer group overflow-hidden"
+              onClick={() => openGallery(0)}
+            >
               <img 
                 src={selectedProperty.images[0]} 
                 alt={selectedProperty.name} 
                 onError={handleImageError}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-black/30"></div>
+              <div className="absolute inset-0 bg-black/30 transition-opacity group-hover:bg-black/20"></div>
+              
               <button 
-                onClick={handleBackToHome}
-                className="absolute top-24 left-4 md:left-8 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center hover:bg-white/30 transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleBackToHome(); }}
+                className="absolute top-24 left-4 md:left-8 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center hover:bg-white/30 transition-colors z-10"
               >
                 <ChevronLeft className="mr-2" size={20} /> Back to Properties
               </button>
+
+              {/* View Photos Button */}
+              <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 bg-white/90 backdrop-blur text-brand-dark px-5 py-2.5 rounded-xl font-bold text-sm flex items-center shadow-lg transition-transform transform group-hover:scale-105 hover:bg-white z-10">
+                <Grid size={18} className="mr-2" /> View Gallery
+              </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
-              <div className="flex flex-col lg:flex-row gap-12">
-                
-                {/* Left Column: Info */}
-                <div className="flex-1">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
+              
                   <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                    <div className="flex justify-between items-start mb-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start mb-6">
                       <div>
                          <h1 className="text-4xl font-serif font-bold text-brand-dark mb-2">{selectedProperty.name}</h1>
                          <div className="flex items-center text-gray-500">
@@ -501,7 +567,7 @@ function App() {
                            <span>Sayulita, Mexico</span>
                          </div>
                       </div>
-                      <div className="text-right">
+                      <div className="mt-4 md:mt-0 text-left md:text-right">
                          <div className="text-3xl font-bold text-brand-clay">${selectedProperty.pricePerNight}</div>
                          <div className="text-sm text-gray-400">per night</div>
                       </div>
@@ -579,27 +645,8 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Calendar Widget */}
-                  <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <h3 className="text-xl font-bold mb-6 flex items-center justify-between">
-                      <span>Availability</span>
-                      <span className="text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100 flex items-center gap-1">
-                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                         Synced with Airbnb
-                      </span>
-                    </h3>
-                    <Calendar 
-                      unavailableDates={selectedProperty.unavailableDates}
-                      selectedStart={searchDateRange.startDate}
-                      selectedEnd={searchDateRange.endDate}
-                      onSelectDate={handleDetailsDateSelect}
-                    />
-                  </div>
-                </div>
-
-                {/* Right Column: Sticky Booking Form */}
-                <div className="lg:w-[400px]">
-                  <div className="bg-white rounded-2xl shadow-xl p-8 sticky top-24 border border-brand-sand">
+                  {/* Booking Form (Moved Here) */}
+                  <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-brand-sand">
                     {bookingSuccess ? (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -620,45 +667,93 @@ function App() {
                       <form onSubmit={handleBookingSubmit}>
                         <h3 className="text-2xl font-serif font-bold mb-6 text-brand-dark">Book your stay</h3>
                         
-                        <div className="space-y-4 mb-6">
-                           <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Dates</label>
-                             <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm font-medium">
+                        <div className="space-y-6 mb-8">
+                           {/* Interactive Date Picker */}
+                           <div className="relative" ref={bookingDatePickerRef}>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Dates</label>
+                             <div 
+                               className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-base font-medium flex items-center gap-3 cursor-pointer hover:border-brand-clay transition-colors"
+                               onClick={() => setShowBookingDatePicker(!showBookingDatePicker)}
+                             >
+                               <CalendarIcon className="text-brand-clay" size={20} />
+                               <span className={searchDateRange.startDate ? 'text-gray-900' : 'text-gray-400'}>
                                {searchDateRange.startDate ? formatDate(searchDateRange.startDate) : 'Check-in'} 
-                               {' → '} 
+                               {' — '} 
                                {searchDateRange.endDate ? formatDate(searchDateRange.endDate) : 'Check-out'}
+                               </span>
                              </div>
+                             
+                             {/* Popup Calendar */}
+                             {showBookingDatePicker && (
+                                <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-white rounded-xl shadow-2xl p-2 border border-gray-100 w-full sm:w-auto flex justify-center">
+                                  <div className="w-full max-w-sm">
+                                    <Calendar 
+                                      unavailableDates={selectedProperty.unavailableDates} 
+                                      selectedStart={searchDateRange.startDate}
+                                      selectedEnd={searchDateRange.endDate}
+                                      onSelectDate={handleDetailsDateSelect}
+                                    />
+                                    <div className="p-3 border-t border-gray-50 flex justify-end bg-gray-50/50 rounded-b-lg">
+                                       <button 
+                                         type="button"
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           setShowBookingDatePicker(false);
+                                         }}
+                                         className="text-xs bg-brand-dark text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-clay transition-colors"
+                                       >
+                                         Done
+                                       </button>
+                                    </div>
+                                  </div>
+                                </div>
+                             )}
                            </div>
                            
-                           <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
-                             <input required type="text" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="John Doe" />
-                           </div>
-                           
-                           <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email</label>
-                             <input required type="email" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="john@example.com" />
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div>
+                               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Full Name</label>
+                               <input required type="text" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="John Doe" />
+                             </div>
+                             
+                             <div>
+                               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email</label>
+                               <input required type="email" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="john@example.com" />
+                             </div>
                            </div>
 
                            <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Message (Optional)</label>
-                             <textarea className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all h-24 resize-none" placeholder="Special requests, arrival time..."></textarea>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone Number</label>
+                             <input required type="tel" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="+1 (555) 000-0000" />
+                           </div>
+
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Message (Optional)</label>
+                             <textarea className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all h-32 resize-none" placeholder="Special requests, arrival time..."></textarea>
                            </div>
                         </div>
 
-                        <div className="bg-gray-50 p-4 rounded-lg mb-6 space-y-2">
-                           <div className="flex justify-between text-sm">
-                             <span className="text-gray-600">${selectedProperty.pricePerNight} x 5 nights</span>
-                             <span className="font-medium">${selectedProperty.pricePerNight * 5}</span>
-                           </div>
-                           <div className="flex justify-between text-sm">
-                             <span className="text-gray-600">Cleaning Fee</span>
-                             <span className="font-medium">$100</span>
-                           </div>
-                           <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-lg text-brand-dark">
-                             <span>Total</span>
-                             <span>${selectedProperty.pricePerNight * 5 + 100}</span>
-                           </div>
+                        <div className="bg-gray-50 p-6 rounded-xl mb-8 space-y-3">
+                           {pricing.nights > 0 ? (
+                             <>
+                               <div className="flex justify-between text-gray-600">
+                                 <span>${selectedProperty.pricePerNight} x {pricing.nights} nights</span>
+                                 <span className="font-medium">${pricing.subtotal}</span>
+                               </div>
+                               <div className="flex justify-between text-gray-600">
+                                 <span>Cleaning Fee</span>
+                                 <span className="font-medium">$100</span>
+                               </div>
+                               <div className="border-t border-gray-200 pt-3 flex justify-between font-bold text-lg text-brand-dark">
+                                 <span>Total</span>
+                                 <span>${pricing.total}</span>
+                               </div>
+                             </>
+                           ) : (
+                             <div className="text-center text-gray-500 text-sm py-2">
+                               Select dates to see pricing
+                             </div>
+                           )}
                         </div>
                         
                         <button 
@@ -671,8 +766,23 @@ function App() {
                       </form>
                     )}
                   </div>
-                </div>
-              </div>
+
+                  {/* Calendar Widget */}
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h3 className="text-xl font-bold mb-6 flex items-center justify-between">
+                      <span>Availability</span>
+                      <span className="text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100 flex items-center gap-1">
+                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                         Synced with Airbnb
+                      </span>
+                    </h3>
+                    <Calendar 
+                      unavailableDates={selectedProperty.unavailableDates}
+                      selectedStart={null} // Removed selection highlighting
+                      selectedEnd={null}   // Removed selection highlighting
+                      onSelectDate={handleDetailsDateSelect} // Keeps functionality but no visuals on this calendar
+                    />
+                  </div>
             </div>
             
             {/* Image Grid (More photos) */}
@@ -680,16 +790,29 @@ function App() {
                <h3 className="text-2xl font-serif font-bold mb-6">Gallery</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedProperty.images.map((img, idx) => (
-                    <img 
+                    <div 
                       key={idx} 
-                      src={img} 
-                      alt="Property detail" 
-                      onError={handleImageError}
-                      className="w-full h-80 object-cover rounded-xl" 
-                    />
+                      className="cursor-pointer overflow-hidden rounded-xl group"
+                      onClick={() => openGallery(idx)}
+                    >
+                      <img 
+                        src={img} 
+                        alt="Property detail" 
+                        onError={handleImageError}
+                        className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-105" 
+                      />
+                    </div>
                   ))}
                </div>
             </div>
+
+            {/* Gallery Modal */}
+            <ImageGalleryModal 
+              isOpen={isGalleryOpen}
+              onClose={() => setIsGalleryOpen(false)}
+              images={selectedProperty.images}
+              startIndex={galleryStartIndex}
+            />
           </div>
         )}
       </main>
@@ -750,6 +873,9 @@ function App() {
       <div className="hidden">
         <ChevronLeft />
       </div>
+
+      {/* Floating WhatsApp Widget */}
+      <WhatsAppWidget />
     </div>
   );
 }

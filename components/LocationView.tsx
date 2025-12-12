@@ -36,7 +36,7 @@ export const LocationView: React.FC = () => {
                 Mexico, 63734
               </p>
               <p className="mt-4 text-gray-500">
-                Located in the peaceful North End of Sayulita, away from the noise of the town square but just a short stroll to the beach.
+                Located in the peaceful South Side of Sayulita, away from the noise of the town square but just a short stroll to the beach.
               </p>
             </div>
 
@@ -124,9 +124,9 @@ export const LocationView: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
              {[
                { name: 'Sayulita Beach', time: '5 min walk', icon: <Sun size={20} /> },
-               { name: 'Town Plaza', time: '10 min walk', icon: <MapPin size={20} /> },
+               { name: 'Town Plaza', time: '5 min walk', icon: <MapPin size={20} /> },
                { name: 'Playa de los Muertos', time: '15 min walk', icon: <Sun size={20} /> },
-               { name: 'San Pancho', time: '15 min drive', icon: <Car size={20} /> },
+               { name: 'San Pancho', time: '20 min drive', icon: <Car size={20} /> },
              ].map((item, i) => (
                <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-brand-sand flex flex-col items-center text-center">
                  <div className="text-brand-clay mb-2">{item.icon}</div>
