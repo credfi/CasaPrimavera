@@ -135,8 +135,8 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
        {/* Hero Section */}
        <div className="bg-brand-dark py-20 text-center text-white relative overflow-hidden h-[40vh] flex items-center justify-center">
           <img 
-            src="https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
-            alt="Casa Primavera Pool"
+            src="https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-skull2.jpg" 
+            alt="Casa Primavera Artistic Detail"
             className="absolute inset-0 w-full h-full object-cover opacity-40"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/80 to-transparent"></div>

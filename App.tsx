@@ -9,6 +9,7 @@ import { FAQView } from './components/FAQView';
 import { BookingView } from './components/BookingView';
 import { WhatsAppWidget } from './components/WhatsAppWidget';
 import { ImageGalleryModal } from './components/ImageGalleryModal';
+import { Testimonials } from './components/Testimonials';
 import { Footer } from './components/Footer';
 import { fetchAndParseIcal } from './utils/icalParser';
 import { 
@@ -610,6 +611,9 @@ function App() {
                  </div>
                </div>
             </div>
+
+            {/* Testimonials Section */}
+            <Testimonials />
           </>
         )}
 
