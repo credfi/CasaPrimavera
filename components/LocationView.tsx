@@ -7,7 +7,7 @@ export const LocationView: React.FC = () => {
       {/* Hero Section */}
       <div className="relative h-[40vh] bg-brand-dark overflow-hidden flex items-center justify-center">
         <img 
-          src="https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+          src="https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/alice-kotlyarenko-anMtXp_eOtE-unsplash.jpg" 
           alt="Sayulita Streets" 
           className="absolute inset-0 w-full h-full object-cover opacity-50"
         />

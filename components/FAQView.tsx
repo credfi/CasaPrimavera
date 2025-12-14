@@ -81,7 +81,7 @@ export const FAQView: React.FC<FAQViewProps> = ({ onContactClick }) => {
       {/* Hero Section */}
       <div className="relative h-[40vh] flex items-center justify-center overflow-hidden bg-brand-dark">
          <img 
-          src="https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+          src="https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/high%20res-1742.jpg" 
           alt="Peaceful interior" 
           className="absolute inset-0 w-full h-full object-cover opacity-40"
         />

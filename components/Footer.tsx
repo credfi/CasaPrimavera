@@ -38,7 +38,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li><button onClick={() => onNavigate('RECOMMENDATIONS')} className="hover:text-brand-clay transition-colors flex items-center gap-2">Local Guide</button></li>
               <li><button onClick={() => onNavigate('LOCATION')} className="hover:text-brand-clay transition-colors flex items-center gap-2">Location</button></li>
               <li><button onClick={() => onNavigate('FAQ')} className="hover:text-brand-clay transition-colors flex items-center gap-2">FAQ</button></li>
-              <li><button onClick={() => onNavigate('CONTACT')} className="hover:text-brand-clay transition-colors flex items-center gap-2">Contact Us</button></li>
               <li><button onClick={() => onNavigate('BOOKING')} className="hover:text-brand-clay transition-colors flex items-center gap-2">Booking Request</button></li>
             </ul>
           </div>

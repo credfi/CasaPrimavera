@@ -1,4 +1,4 @@
-export type View = 'HOME' | 'DETAILS' | 'LOCATION' | 'RECOMMENDATIONS' | 'FAQ' | 'CONTACT' | 'BOOKING';
+export type View = 'HOME' | 'DETAILS' | 'LOCATION' | 'RECOMMENDATIONS' | 'FAQ' | 'BOOKING';
 
 export interface Property {
   id: string;

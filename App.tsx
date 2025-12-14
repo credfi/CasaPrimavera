@@ -6,7 +6,6 @@ import { Calendar } from './components/Calendar';
 import { LocationView } from './components/LocationView';
 import { RecommendationsView } from './components/RecommendationsView';
 import { FAQView } from './components/FAQView';
-import { ContactView } from './components/ContactView';
 import { BookingView } from './components/BookingView';
 import { WhatsAppWidget } from './components/WhatsAppWidget';
 import { ImageGalleryModal } from './components/ImageGalleryModal';
@@ -454,7 +453,6 @@ function App() {
              <button onClick={() => { setView('LOCATION'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Location</button>
              <button onClick={() => { setView('FAQ'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">FAQ</button>
              <button onClick={() => { setView('BOOKING'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Booking Request</button>
-             <button onClick={() => { setView('CONTACT'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Contact</button>
           </div>
         )}
       </nav>
@@ -468,8 +466,8 @@ function App() {
               {/* Background Container */}
               <div className="absolute inset-0 overflow-hidden">
                 <img 
-                  src="https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
-                  alt="Tropical resort pool" 
+                  src="https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/devon-hawkins-vpYjzLfzTIU-unsplash.jpg" 
+                  alt="Casa Primavera Sayulita" 
                   className="w-full h-full object-cover opacity-60"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
@@ -624,11 +622,7 @@ function App() {
         )}
 
         {view === 'FAQ' && (
-          <FAQView onContactClick={() => { setView('CONTACT'); window.scrollTo(0, 0); }} />
-        )}
-
-        {view === 'CONTACT' && (
-          <ContactView onNavigateToGuide={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }} />
+          <FAQView onContactClick={() => { setView('BOOKING'); window.scrollTo(0, 0); }} />
         )}
         
         {view === 'BOOKING' && (

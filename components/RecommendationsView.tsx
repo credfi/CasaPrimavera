@@ -7,7 +7,7 @@ export const RecommendationsView: React.FC = () => {
       {/* SEO-friendly Hero Section */}
       <div className="relative h-[50vh] flex items-center justify-center overflow-hidden">
         <img 
-          src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+          src="https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/alice-kotlyarenko-dyDr19bQldc-unsplash.jpg" 
           alt="Sayulita Mexico colorful streets and culture" 
           className="absolute inset-0 w-full h-full object-cover opacity-60"
         />
