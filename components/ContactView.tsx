@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle, MessageSquare } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle, MessageSquare, Loader2, ArrowRight } from 'lucide-react';
 
-export const ContactView: React.FC = () => {
+interface ContactViewProps {
+  onNavigateToGuide: () => void;
+}
+
+export const ContactView: React.FC<ContactViewProps> = ({ onNavigateToGuide }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -11,14 +15,54 @@ export const ContactView: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
+    
+    // Standardized Payload to match BookingView and App forms
+    // FIXED: Changed 'N/A' values to match the formats used in BookingView
+    // to prevents 500 errors in Make.com caused by data type mismatches (e.g. text in a number column).
+    const payload = {
+      formType: 'Contact Form',
+      name: formData.name,
+      email: formData.email,
+      phone: 'Not Provided', 
+      guests: '1', // Default to '1' instead of 'N/A' to ensure compatibility with Number columns in Sheets
+      checkIn: 'Not specified', // Match BookingView format
+      checkOut: 'Not specified', // Match BookingView format
+      interest: formData.category, 
+      // CRITICAL FIX: Send '0' instead of text 'Pending Inquiry' to strictly satisfy Numeric column types
+      estimatedTotal: '0', 
+      message: formData.message
+    };
+
+    try {
+      // NOTE: Standard application/json request.
+      // This requires the 'Webhook Response' module in Make to handle CORS.
+      const response = await fetch('https://hook.us2.make.com/v1j91fq2snhxiwzi5dxcgibvyu4xyjgg', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setSubmitted(true);
+      } else {
+        // Explicit error handling for Make.com states
+        if (response.status === 404 || response.status === 500) {
+          throw new Error("Make.com Scenario Error: The scenario is likely stopped/offline. Please go to Make.com and turn the scenario 'ON' (or click Run Once).");
+        }
+        throw new Error(`Server responded with ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown Error'}`);
+    } finally {
       setIsSubmitting(false);
-      setSubmitted(true);
-    }, 1500);
+    }
   };
 
   const categories = [
@@ -109,12 +153,14 @@ export const ContactView: React.FC = () => {
                 <h3 className="text-3xl font-serif font-bold text-brand-dark mb-4">Message Sent!</h3>
                 <p className="text-gray-600 max-w-md mx-auto mb-8">
                   Thank you for reaching out to Casa Primavera. We've received your inquiry and will get back to you within 24 hours.
+                  <br /><br />
+                  While you wait, explore our curated guide to Sayulita's best spots.
                 </p>
                 <button 
-                  onClick={() => { setSubmitted(false); setFormData({...formData, message: ''}); }}
-                  className="px-8 py-3 bg-brand-clay text-white font-bold rounded-lg hover:bg-brand-terra transition-colors"
+                  onClick={onNavigateToGuide}
+                  className="px-8 py-3 bg-brand-clay text-white font-bold rounded-lg hover:bg-brand-clay transition-colors inline-flex items-center gap-2"
                 >
-                  Send another message
+                  View Local Guide <ArrowRight size={18} />
                 </button>
               </div>
             ) : (
@@ -179,7 +225,7 @@ export const ContactView: React.FC = () => {
                   className="w-full py-4 bg-brand-dark text-white font-bold rounded-xl hover:bg-brand-clay transition-all shadow-lg shadow-brand-dark/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
-                    'Sending...'
+                    <><Loader2 className="animate-spin mr-2" /> Sending...</>
                   ) : (
                     <>
                       Send Message <Send size={18} />

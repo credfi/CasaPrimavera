@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PROPERTIES, AMENITIES_LIST } from './constants';
-import { Property, DateRange } from './types';
+import { Property, DateRange, View } from './types';
 import { PropertyCard } from './components/PropertyCard';
 import { Calendar } from './components/Calendar';
 import { LocationView } from './components/LocationView';
@@ -10,32 +10,27 @@ import { ContactView } from './components/ContactView';
 import { BookingView } from './components/BookingView';
 import { WhatsAppWidget } from './components/WhatsAppWidget';
 import { ImageGalleryModal } from './components/ImageGalleryModal';
+import { Footer } from './components/Footer';
 import { fetchAndParseIcal } from './utils/icalParser';
 import { 
   Calendar as CalendarIcon, 
   MapPin, 
   Menu, 
   X, 
-  Search, 
   ArrowRight, 
   CheckCircle,
-  Instagram,
-  Facebook,
-  Mail,
-  Phone,
   ChevronLeft,
+  ChevronRight,
   Users,
   Bed,
   Home,
   Sun,
   Maximize,
   MinusCircle,
-  Grid
+  Grid,
+  Loader2
 } from 'lucide-react';
-import { formatDate, isDateInRange, toISODate } from './utils/dateUtils';
-
-// Simple Router implementation
-type View = 'HOME' | 'DETAILS' | 'LOCATION' | 'RECOMMENDATIONS' | 'FAQ' | 'CONTACT' | 'BOOKING';
+import { formatDate } from './utils/dateUtils';
 
 function App() {
   const [view, setView] = useState<View>('HOME');
@@ -62,10 +57,25 @@ function App() {
   const [filteredProperties, setFilteredProperties] = useState<Property[]>(PROPERTIES);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  
+  // Property Specific Form Data
+  const [bookingFormData, setBookingFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    guests: '1',
+    message: ''
+  });
 
   // Gallery Modal State
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
+  // Hero Carousel State
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [heroTouchStart, setHeroTouchStart] = useState<number | null>(null);
+  const [heroTouchEnd, setHeroTouchEnd] = useState<number | null>(null);
 
   // Handle click outside to close date pickers
   useEffect(() => {
@@ -221,6 +231,10 @@ function App() {
 
   const handlePropertySelect = (property: Property) => {
     setSelectedProperty(property);
+    setHeroImageIndex(0);
+    // Reset booking form state when opening a new property
+    setBookingFormData({ name: '', email: '', phone: '', guests: '1', message: '' });
+    setBookingSuccess(false);
     setView('DETAILS');
     window.scrollTo(0, 0);
   };
@@ -228,32 +242,24 @@ function App() {
   const handleBackToHome = () => {
     setView('HOME');
     setSelectedProperty(null);
+    setHeroImageIndex(0);
     setBookingSuccess(false);
     window.scrollTo(0, 0);
   };
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simulate API call
-    setTimeout(() => {
-      setBookingSuccess(true);
-    }, 1000);
+  const handleNavigate = (targetView: View) => {
+    setView(targetView);
+    if (targetView === 'HOME') {
+      setSelectedProperty(null);
+      setHeroImageIndex(0);
+      setBookingSuccess(false);
+    }
+    window.scrollTo(0, 0);
   };
 
-  const getBalconyIcon = (type: string) => {
-    if (type.includes('Large')) return <Maximize className="text-brand-clay" />;
-    if (type.includes('No')) return <MinusCircle className="text-brand-clay" />;
-    return <Sun className="text-brand-clay" />;
-  };
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    e.currentTarget.src = 'https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
-  };
-
-  const openGallery = (index: number = 0) => {
-    setGalleryStartIndex(index);
-    setIsGalleryOpen(true);
-  };
+  const handleBookingFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+     setBookingFormData({...bookingFormData, [e.target.name]: e.target.value});
+  }
 
   // Pricing Calculation
   const getPricing = () => {
@@ -276,6 +282,107 @@ function App() {
   };
 
   const pricing = getPricing();
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingBooking(true);
+
+    // Standardized Payload to match BookingView
+    // Removing currency symbol from estimatedTotal to ensure clean data parsing in Sheets
+    const payload = {
+      formType: 'Property Specific Booking',
+      name: bookingFormData.name,
+      email: bookingFormData.email,
+      phone: bookingFormData.phone,
+      guests: bookingFormData.guests,
+      checkIn: searchDateRange.startDate ? formatDate(searchDateRange.startDate) : 'Not specified',
+      checkOut: searchDateRange.endDate ? formatDate(searchDateRange.endDate) : 'Not specified',
+      interest: selectedProperty?.name || 'Unknown Property',
+      // CRITICAL FIX: Send '0' instead of 'Pending Dates' to strictly satisfy Numeric column types in Sheets/Make
+      estimatedTotal: pricing.subtotal > 0 ? `${pricing.subtotal}` : '0', 
+      message: bookingFormData.message
+    };
+
+    try {
+       const response = await fetch('https://hook.us2.make.com/v1j91fq2snhxiwzi5dxcgibvyu4xyjgg', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (response.ok) {
+        setBookingSuccess(true);
+      } else {
+        // Explicit error handling for Make.com states
+        if (response.status === 404 || response.status === 500) {
+          throw new Error("Make.com Scenario Error: The scenario is likely stopped/offline. Please go to Make.com and turn the scenario 'ON' (or click Run Once).");
+        }
+        throw new Error(`Server responded with ${response.status}`);
+      }
+    } catch(err) {
+      console.error('Error submitting form:', err);
+      alert(`Failed to send request: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsSubmittingBooking(false);
+    }
+  };
+
+  const getBalconyIcon = (type: string) => {
+    if (type.includes('Large')) return <Maximize className="text-brand-clay" />;
+    if (type.includes('No')) return <MinusCircle className="text-brand-clay" />;
+    return <Sun className="text-brand-clay" />;
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.src = 'https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
+  };
+
+  const openGallery = (index: number = 0) => {
+    setGalleryStartIndex(index);
+    setIsGalleryOpen(true);
+  };
+
+  // Hero Carousel Logic
+  const nextHeroImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (selectedProperty) {
+      setHeroImageIndex((prev) => (prev + 1) % selectedProperty.images.length);
+    }
+  };
+
+  const prevHeroImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (selectedProperty) {
+      setHeroImageIndex((prev) => (prev - 1 + selectedProperty.images.length) % selectedProperty.images.length);
+    }
+  };
+
+  const onHeroTouchStart = (e: React.TouchEvent) => {
+    setHeroTouchEnd(null);
+    setHeroTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onHeroTouchMove = (e: React.TouchEvent) => {
+    setHeroTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onHeroTouchEnd = () => {
+    if (!heroTouchStart || !heroTouchEnd || !selectedProperty) return;
+    const distance = heroTouchStart - heroTouchEnd;
+    const minSwipeDistance = 50;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      setHeroImageIndex((prev) => (prev + 1) % selectedProperty.images.length);
+    }
+    if (isRightSwipe) {
+      setHeroImageIndex((prev) => (prev - 1 + selectedProperty.images.length) % selectedProperty.images.length);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-brand-dark">
@@ -440,7 +547,7 @@ function App() {
                                e.stopPropagation();
                                setShowDatePicker(false);
                              }}
-                             className="text-sm bg-brand-dark text-white px-6 py-2 rounded-xl font-medium hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20"
+                             className="text-sm bg-brand-dark text-white px-6 py-2 rounded-lg font-medium hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20"
                            >
                              Close
                            </button>
@@ -458,8 +565,8 @@ function App() {
                 <div>
                   <h3 className="text-3xl font-serif font-bold text-brand-dark mb-3">Our Collection</h3>
                   <p className="text-gray-500 max-w-xl">
-                    Discover our ten unique properties, from intimate garden casitas to expansive ocean-view villas. 
-                    Direct booking guarantees the best rates.
+                    Explore our 10 unique properties across three distinct room types, ranging from different balcony sizes to unique room layouts. 
+                    All properties feature our signature boho style and are ideally located on the peaceful south side of town.
                   </p>
                 </div>
                 <div className="hidden md:block text-sm text-gray-400">
@@ -517,41 +624,77 @@ function App() {
         )}
 
         {view === 'FAQ' && (
-          <FAQView />
+          <FAQView onContactClick={() => { setView('CONTACT'); window.scrollTo(0, 0); }} />
         )}
 
         {view === 'CONTACT' && (
-          <ContactView />
+          <ContactView onNavigateToGuide={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }} />
         )}
         
         {view === 'BOOKING' && (
-          <BookingView />
+          <BookingView onNavigateToGuide={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }} />
         )}
 
         {view === 'DETAILS' && selectedProperty && (
           <div className="animate-fade-in pb-20">
             {/* Property Hero */}
             <div 
-              className="relative h-[60vh] cursor-pointer group overflow-hidden"
-              onClick={() => openGallery(0)}
+              className="relative h-[60vh] cursor-pointer group overflow-hidden touch-pan-y"
+              onClick={() => openGallery(heroImageIndex)}
+              onTouchStart={onHeroTouchStart}
+              onTouchMove={onHeroTouchMove}
+              onTouchEnd={onHeroTouchEnd}
             >
               <img 
-                src={selectedProperty.images[0]} 
+                src={selectedProperty.images[heroImageIndex]} 
                 alt={selectedProperty.name} 
                 onError={handleImageError}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-700 select-none"
               />
               <div className="absolute inset-0 bg-black/30 transition-opacity group-hover:bg-black/20"></div>
               
               <button 
                 onClick={(e) => { e.stopPropagation(); handleBackToHome(); }}
-                className="absolute top-24 left-4 md:left-8 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center hover:bg-white/30 transition-colors z-10"
+                className="absolute top-24 left-4 md:left-8 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center hover:bg-white/30 transition-colors z-20"
               >
                 <ChevronLeft className="mr-2" size={20} /> Back to Properties
               </button>
 
+              {/* Carousel Controls - Only show if more than 1 image */}
+              {selectedProperty.images.length > 1 && (
+                <>
+                  <button 
+                    onClick={prevHeroImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full text-white transition-all z-20"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <button 
+                    onClick={nextHeroImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full text-white transition-all z-20"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                  
+                  {/* Dots Indicator */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                     {selectedProperty.images.slice(0, 5).map((_, idx) => (
+                        <div 
+                          key={idx}
+                          className={`w-2 h-2 rounded-full transition-all ${idx === heroImageIndex ? 'bg-white scale-125' : 'bg-white/50'}`}
+                        />
+                     ))}
+                     {selectedProperty.images.length > 5 && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-white/50 self-center" />
+                     )}
+                  </div>
+                </>
+              )}
+
               {/* View Photos Button */}
-              <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 bg-white/90 backdrop-blur text-brand-dark px-5 py-2.5 rounded-xl font-bold text-sm flex items-center shadow-lg transition-transform transform group-hover:scale-105 hover:bg-white z-10">
+              <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 bg-white/90 backdrop-blur text-brand-dark px-5 py-2.5 rounded-xl font-bold text-sm flex items-center shadow-lg transition-transform transform hover:scale-105 hover:bg-white z-20">
                 <Grid size={18} className="mr-2" /> View Gallery
               </div>
             </div>
@@ -655,12 +798,14 @@ function App() {
                         <h3 className="text-2xl font-serif font-bold text-gray-800 mb-2">Request Sent!</h3>
                         <p className="text-gray-600 mb-6">
                           Thank you for choosing Casa Primavera. We have received your request for <strong>{selectedProperty.name}</strong> and will contact you shortly to confirm.
+                          <br/><br/>
+                          In the meantime, check out our local guide for more information on Sayulita and what it has to offer.
                         </p>
                         <button 
-                          onClick={() => setBookingSuccess(false)}
-                          className="text-brand-clay font-bold hover:underline"
+                          onClick={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }}
+                          className="text-brand-clay font-bold hover:underline inline-flex items-center gap-1"
                         >
-                          Book another stay
+                          View Local Guide <ArrowRight size={16} />
                         </button>
                       </div>
                     ) : (
@@ -713,169 +858,112 @@ function App() {
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <div>
                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Full Name</label>
-                               <input required type="text" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="John Doe" />
+                               <input 
+                                 name="name" 
+                                 value={bookingFormData.name} 
+                                 onChange={handleBookingFormChange} 
+                                 required 
+                                 type="text" 
+                                 className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                 placeholder="John Doe" 
+                               />
                              </div>
                              
                              <div>
                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email</label>
-                               <input required type="email" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="john@example.com" />
+                               <input 
+                                 name="email" 
+                                 value={bookingFormData.email} 
+                                 onChange={handleBookingFormChange} 
+                                 required 
+                                 type="email" 
+                                 className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                 placeholder="john@example.com" 
+                               />
                              </div>
                            </div>
 
-                           <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone Number</label>
-                             <input required type="tel" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="+1 (555) 000-0000" />
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone</label>
+                                 <input 
+                                   name="phone" 
+                                   value={bookingFormData.phone} 
+                                   onChange={handleBookingFormChange} 
+                                   required 
+                                   type="tel" 
+                                   className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                   placeholder="+1 (555) 000-0000" 
+                                 />
+                              </div>
+                              <div>
+                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Number of Guests</label>
+                                 <select 
+                                   name="guests" 
+                                   value={bookingFormData.guests} 
+                                   onChange={handleBookingFormChange} 
+                                   className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all"
+                                 >
+                                    <option value="1">1 Guest</option>
+                                    <option value="2">2 Guests</option>
+                                 </select>
+                              </div>
                            </div>
 
                            <div>
-                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Message (Optional)</label>
-                             <textarea className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all h-32 resize-none" placeholder="Special requests, arrival time..."></textarea>
+                              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Message (Optional)</label>
+                              <textarea 
+                                name="message" 
+                                value={bookingFormData.message} 
+                                onChange={handleBookingFormChange} 
+                                className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all h-32 resize-none" 
+                                placeholder="Special requests, arrival time, etc..."
+                              ></textarea>
                            </div>
                         </div>
 
-                        <div className="bg-gray-50 p-6 rounded-xl mb-8 space-y-3">
-                           {pricing.nights > 0 ? (
-                             <>
-                               <div className="flex justify-between text-gray-600">
-                                 <span>${selectedProperty.pricePerNight} x {pricing.nights} nights</span>
-                                 <span className="font-medium">${pricing.subtotal}</span>
-                               </div>
-                               <div className="flex justify-between text-gray-600">
-                                 <span>Cleaning Fee</span>
-                                 <span className="font-medium">$100</span>
-                               </div>
-                               <div className="border-t border-gray-200 pt-3 flex justify-between font-bold text-lg text-brand-dark">
-                                 <span>Total</span>
-                                 <span>${pricing.total}</span>
-                               </div>
-                             </>
-                           ) : (
-                             <div className="text-center text-gray-500 text-sm py-2">
-                               Select dates to see pricing
-                             </div>
-                           )}
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-gray-100">
+                          <div className="text-center md:text-left">
+                            <div className="text-sm text-gray-500 mb-1">Total Estimation</div>
+                            <div className="text-2xl font-serif font-bold text-brand-dark">
+                               ${pricing.subtotal > 0 ? pricing.subtotal : selectedProperty.pricePerNight} 
+                               <span className="text-base font-normal text-gray-400"> + fees</span>
+                            </div>
+                          </div>
+                          <button 
+                            type="submit"
+                            disabled={isSubmittingBooking}
+                            className="w-full md:w-auto px-8 py-4 bg-brand-dark text-white font-bold rounded-xl hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                          >
+                            {isSubmittingBooking ? (
+                              <><Loader2 className="animate-spin mr-2" /> Sending...</>
+                            ) : (
+                              <>Send Request <ArrowRight size={20} /></>
+                            )}
+                          </button>
                         </div>
-                        
-                        <button 
-                          type="submit"
-                          className="w-full bg-brand-clay text-white font-bold py-4 rounded-xl hover:bg-brand-terra transition-colors shadow-lg shadow-brand-clay/20 flex items-center justify-center"
-                        >
-                          Request to Book <ArrowRight size={18} className="ml-2" />
-                        </button>
-                        <p className="text-xs text-center text-gray-400 mt-4">You won't be charged yet.</p>
                       </form>
                     )}
                   </div>
-
-                  {/* Calendar Widget */}
-                  <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <h3 className="text-xl font-bold mb-6 flex items-center justify-between">
-                      <span>Availability</span>
-                      <span className="text-xs font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100 flex items-center gap-1">
-                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                         Synced with Airbnb
-                      </span>
-                    </h3>
-                    <Calendar 
-                      unavailableDates={selectedProperty.unavailableDates}
-                      selectedStart={null} // Removed selection highlighting
-                      selectedEnd={null}   // Removed selection highlighting
-                      onSelectDate={handleDetailsDateSelect} // Keeps functionality but no visuals on this calendar
-                    />
-                  </div>
             </div>
-            
-            {/* Image Grid (More photos) */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
-               <h3 className="text-2xl font-serif font-bold mb-6">Gallery</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedProperty.images.map((img, idx) => (
-                    <div 
-                      key={idx} 
-                      className="cursor-pointer overflow-hidden rounded-xl group"
-                      onClick={() => openGallery(idx)}
-                    >
-                      <img 
-                        src={img} 
-                        alt="Property detail" 
-                        onError={handleImageError}
-                        className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-105" 
-                      />
-                    </div>
-                  ))}
-               </div>
-            </div>
-
-            {/* Gallery Modal */}
-            <ImageGalleryModal 
-              isOpen={isGalleryOpen}
-              onClose={() => setIsGalleryOpen(false)}
-              images={selectedProperty.images}
-              startIndex={galleryStartIndex}
-            />
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer id="contact" className="bg-brand-dark text-white py-12 md:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12">
-          <div className="col-span-1 md:col-span-5">
-             <div className="w-12 h-12 bg-brand-clay rounded-full flex items-center justify-center text-white font-serif text-2xl mb-6">
-                C
-             </div>
-             <h2 className="font-serif text-3xl font-bold mb-4">Casa Primavera</h2>
-             <p className="text-gray-400 max-w-sm mb-6">
-               A collection of luxury properties in the heart of Sayulita, Mexico. 
-               Experience the perfect blend of modern comfort and Mexican tradition.
-             </p>
-             <div className="flex space-x-4">
-               <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-brand-clay transition-colors"><Instagram size={20} /></a>
-               <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-brand-clay transition-colors"><Facebook size={20} /></a>
-             </div>
-          </div>
-          
-          <div className="col-span-1 md:col-span-3">
-            <h4 className="font-bold text-lg mb-6">Quick Links</h4>
-            <ul className="space-y-3 text-gray-400">
-              <li><button onClick={handleBackToHome} className="hover:text-brand-clay">Our Properties</button></li>
-              <li><button onClick={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }} className="hover:text-brand-clay">Local Guide</button></li>
-              <li><button onClick={() => { setView('LOCATION'); window.scrollTo(0, 0); }} className="hover:text-brand-clay">About Sayulita</button></li>
-              <li><button onClick={() => { setView('FAQ'); window.scrollTo(0, 0); }} className="hover:text-brand-clay">FAQ</button></li>
-              <li><button onClick={() => { setView('CONTACT'); window.scrollTo(0, 0); }} className="hover:text-brand-clay">Contact Us</button></li>
-            </ul>
-          </div>
-          
-          <div className="col-span-1 md:col-span-4">
-            <h4 className="font-bold text-lg mb-6">Contact</h4>
-            <ul className="space-y-4 text-gray-400">
-              <li className="flex items-start">
-                <MapPin className="mr-3 text-brand-clay flex-shrink-0" size={20} />
-                <span>66 Calle Primavera,<br/>Sayulita, Mexico</span>
-              </li>
-              <li className="flex items-center">
-                <Mail className="mr-3 text-brand-clay flex-shrink-0" size={20} />
-                <a href="mailto:primaverasayulita@gmail.com" className="hover:text-brand-clay transition-colors break-all">primaverasayulita@gmail.com</a>
-              </li>
-              <li className="flex items-center">
-                <Phone className="mr-3 text-brand-clay flex-shrink-0" size={20} />
-                <a href="tel:+523221406649" className="hover:text-brand-clay transition-colors">+52 322 140 6649</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-white/10 text-center text-gray-500 text-sm">
-           © {new Date().getFullYear()} Casa Primavera Sayulita. All rights reserved.
-        </div>
-      </footer>
-      
-      {/* Import chevron left for the back button in details view */}
-      <div className="hidden">
-        <ChevronLeft />
-      </div>
+      <Footer onNavigate={handleNavigate} />
 
-      {/* Floating WhatsApp Widget */}
+      {/* Global Modals/Widgets */}
+      {selectedProperty && (
+        <ImageGalleryModal 
+          images={selectedProperty.images} 
+          isOpen={isGalleryOpen} 
+          onClose={() => setIsGalleryOpen(false)} 
+          startIndex={galleryStartIndex} 
+        />
+      )}
+      
       <WhatsAppWidget />
+
     </div>
   );
 }

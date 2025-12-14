@@ -1,15 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle, ArrowRight, MessageCircle, Calendar as CalendarIcon, X } from 'lucide-react';
+import { CheckCircle, ArrowRight, MessageCircle, Calendar as CalendarIcon, X, Loader2 } from 'lucide-react';
 import { Calendar } from './Calendar';
 import { formatDate } from '../utils/dateUtils';
 
-export const BookingView: React.FC = () => {
+interface BookingViewProps {
+  onNavigateToGuide: () => void;
+}
+
+export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Date Picker State
   const [dateRange, setDateRange] = useState<{startDate: Date | null, endDate: Date | null}>({ startDate: null, endDate: null });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    guests: '1',
+    roomPreference: '',
+    message: ''
+  });
 
   // WhatsApp logic matching the widget
   const phoneNumber = '523221406649';
@@ -58,12 +73,61 @@ export const BookingView: React.FC = () => {
     setDateRange({ startDate: null, endDate: null });
   };
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API call
-    setTimeout(() => {
-      setBookingSuccess(true);
-    }, 1000);
+    setIsSubmitting(true);
+
+    // Standardized Payload
+    const payload = {
+      formType: 'General Booking Request',
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      // CRITICAL FIX: Ensure guests is numeric (strip '+') to prevent 500 errors if column is Number type
+      guests: formData.guests.replace('+', ''), 
+      checkIn: dateRange.startDate ? formatDate(dateRange.startDate) : 'Not specified',
+      checkOut: dateRange.endDate ? formatDate(dateRange.endDate) : 'Not specified',
+      interest: formData.roomPreference || 'No Preference',
+      // CRITICAL FIX: Send '0' instead of text 'Pending Quote' to prevent 500 errors on Numeric columns
+      estimatedTotal: '0',
+      message: formData.message
+    };
+
+    try {
+      // NOTE: Standard application/json request.
+      // This requires the 'Webhook Response' module in Make to handle CORS.
+      const response = await fetch('https://hook.us2.make.com/v1j91fq2snhxiwzi5dxcgibvyu4xyjgg', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setBookingSuccess(true);
+        // Reset form
+        setFormData({ name: '', email: '', phone: '', guests: '1', roomPreference: '', message: '' });
+        setDateRange({ startDate: null, endDate: null });
+      } else {
+        // Explicit error handling for Make.com states
+        if (response.status === 404 || response.status === 500) {
+          throw new Error("Make.com Scenario Error: The scenario is likely stopped/offline. Please go to Make.com and turn the scenario 'ON' (or click Run Once).");
+        }
+        throw new Error(`Server responded with ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown Error'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -94,12 +158,14 @@ export const BookingView: React.FC = () => {
                       <h3 className="text-2xl font-serif font-bold text-gray-800 mb-4">Request Sent Successfully!</h3>
                       <p className="text-gray-600 mb-8 leading-relaxed max-w-lg mx-auto">
                         Thank you for choosing Casa Primavera. We have received your details and our team will contact you shortly to confirm availability and finalize your reservation.
+                        <br /><br />
+                        In the meantime, check out our local guide for more information on Sayulita and what it has to offer.
                       </p>
                       <button 
-                        onClick={() => setBookingSuccess(false)}
-                        className="text-brand-clay font-bold hover:text-brand-terra transition-colors border-b-2 border-transparent hover:border-brand-terra pb-1"
+                        onClick={onNavigateToGuide}
+                        className="inline-flex items-center gap-2 text-brand-clay font-bold hover:text-brand-terra transition-colors border-b-2 border-transparent hover:border-brand-terra pb-1"
                       >
-                        Submit another request
+                        View Local Guide <ArrowRight size={18} />
                       </button>
                   </div>
               ) : (
@@ -179,26 +245,72 @@ export const BookingView: React.FC = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Full Name</label>
-                                <input required type="text" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="John Doe" />
+                                <input 
+                                  name="name"
+                                  value={formData.name}
+                                  onChange={handleInputChange}
+                                  required 
+                                  type="text" 
+                                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                  placeholder="John Doe" 
+                                />
                             </div>
                             
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email</label>
-                                <input required type="email" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="john@example.com" />
+                                <input 
+                                  name="email"
+                                  value={formData.email}
+                                  onChange={handleInputChange}
+                                  required 
+                                  type="email" 
+                                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                  placeholder="john@example.com" 
+                                />
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone Number</label>
-                                <input required type="tel" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="+1 (555) 000-0000" />
+                                <input 
+                                  name="phone"
+                                  value={formData.phone}
+                                  onChange={handleInputChange}
+                                  required 
+                                  type="tel" 
+                                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                  placeholder="+1 (555) 000-0000" 
+                                />
                             </div>
 
                             <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Number of Guests</label>
+                                <select 
+                                  name="guests"
+                                  value={formData.guests}
+                                  onChange={handleInputChange}
+                                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all appearance-none cursor-pointer text-gray-700"
+                                >
+                                    <option value="1">1 Guest</option>
+                                    <option value="2">2 Guests</option>
+                                    <option value="3">3 Guests</option>
+                                    <option value="4">4 Guests</option>
+                                    <option value="5">5+ Guests</option>
+                                </select>
+                            </div>
+                          </div>
+
+                          <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Room Preference</label>
                                 <div className="relative">
-                                  <select className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all appearance-none cursor-pointer text-gray-700">
-                                      <option value="">No Preference</option>
+                                  <select 
+                                    name="roomPreference"
+                                    value={formData.roomPreference}
+                                    onChange={handleInputChange}
+                                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all appearance-none cursor-pointer text-gray-700"
+                                  >
+                                      <option value="No Preference">No Preference</option>
                                       <option value="Large Terrace">Large Terrace</option>
                                       <option value="Small Balcony">Small Balcony</option>
                                       <option value="No Balcony">No Balcony</option>
@@ -208,19 +320,29 @@ export const BookingView: React.FC = () => {
                                   </div>
                                 </div>
                             </div>
-                          </div>
 
                           <div>
                               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Message (Optional)</label>
-                              <textarea className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all h-32 resize-none" placeholder="Tell us about your trip..."></textarea>
+                              <textarea 
+                                name="message"
+                                value={formData.message}
+                                onChange={handleInputChange}
+                                className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all h-32 resize-none" 
+                                placeholder="Tell us about your trip..."
+                              ></textarea>
                           </div>
                       </div>
                       
                       <button 
                         type="submit"
-                        className="w-full bg-brand-dark text-white font-bold py-4 rounded-xl hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20 flex items-center justify-center group text-lg"
+                        disabled={isSubmitting}
+                        className="w-full bg-brand-dark text-white font-bold py-4 rounded-xl hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20 flex items-center justify-center group text-lg disabled:opacity-70 disabled:cursor-not-allowed"
                       >
-                        Submit Booking Request <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        {isSubmitting ? (
+                          <><Loader2 className="animate-spin mr-2" /> Sending Request...</>
+                        ) : (
+                          <>Submit Booking Request <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" /></>
+                        )}
                       </button>
                       
                       {/* WhatsApp Integration */}

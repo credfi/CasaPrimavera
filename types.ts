@@ -1,3 +1,5 @@
+export type View = 'HOME' | 'DETAILS' | 'LOCATION' | 'RECOMMENDATIONS' | 'FAQ' | 'CONTACT' | 'BOOKING';
+
 export interface Property {
   id: string;
   name: string;

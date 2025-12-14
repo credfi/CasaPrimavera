@@ -1,7 +1,11 @@
 import React from 'react';
 import { HelpCircle, MessageCircle, Calendar, Wifi, MapPin, CreditCard, Key } from 'lucide-react';
 
-export const FAQView: React.FC = () => {
+interface FAQViewProps {
+  onContactClick: () => void;
+}
+
+export const FAQView: React.FC<FAQViewProps> = ({ onContactClick }) => {
   const faqs = [
     {
       category: "Booking & Payment",
@@ -126,12 +130,12 @@ export const FAQView: React.FC = () => {
           <p className="text-gray-600 mb-8 max-w-xl mx-auto">
             Can't find the answer you're looking for? Please contact our friendly team and we will get back to you as soon as possible.
           </p>
-          <a 
-            href="#contact" 
+          <button 
+            onClick={onContactClick}
             className="inline-block px-8 py-3 bg-brand-dark text-white font-bold rounded-lg hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20"
           >
             Contact Us
-          </a>
+          </button>
         </div>
       </div>
     </div>

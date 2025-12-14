@@ -9,6 +9,8 @@ interface PropertyCardProps {
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDetails }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Helper to get icon for balcony type
   const getBalconyIcon = (type: string) => {
@@ -22,28 +24,60 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDeta
     e.currentTarget.src = 'https://images.unsplash.com/photo-1540541338287-41700207dee6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
   };
 
-  const nextImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const nextImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
   };
 
-  const prevImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const prevImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+  };
+
+  // Touch handlers for swipe support
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null); // Reset touch end
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const minSwipeDistance = 50;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Swiped left -> Next image
+      setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
+    }
+    
+    if (isRightSwipe) {
+      // Swiped right -> Previous image
+      setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+    }
   };
 
   return (
     <div className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-brand-sand">
       {/* Image Carousel Container */}
       <div 
-        className="relative h-64 bg-gray-100 flex items-center justify-center group/image cursor-pointer"
+        className="relative h-64 bg-gray-100 flex items-center justify-center group/image cursor-pointer touch-pan-y"
         onClick={() => onViewDetails(property)}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         <img 
           src={property.images[currentImageIndex]} 
           alt={`${property.name} - View ${currentImageIndex + 1}`}
           onError={handleImageError}
-          className="w-full h-full object-cover transition-opacity duration-300"
+          className="w-full h-full object-cover transition-opacity duration-300 select-none"
         />
         
         {/* Type Badge */}
@@ -70,7 +104,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDeta
             </button>
             
             {/* Dots Indicator */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 bg-black/10 backdrop-blur-[2px] px-2 py-1 rounded-full">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 bg-black/10 backdrop-blur-[2px] px-2 py-1 rounded-full pointer-events-none">
               {property.images.slice(0, 5).map((_, idx) => (
                 <div 
                   key={idx}
