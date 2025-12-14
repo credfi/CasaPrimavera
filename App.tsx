@@ -690,11 +690,6 @@ function App() {
                   </div>
                 </>
               )}
-
-              {/* View Photos Button */}
-              <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 bg-white/90 backdrop-blur text-brand-dark px-5 py-2.5 rounded-xl font-bold text-sm flex items-center shadow-lg transition-transform transform hover:scale-105 hover:bg-white z-20">
-                <Grid size={18} className="mr-2" /> View Gallery
-              </div>
             </div>
 
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
