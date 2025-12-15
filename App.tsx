@@ -12,6 +12,7 @@ import { ImageGalleryModal } from './components/ImageGalleryModal';
 import { Testimonials } from './components/Testimonials';
 import { Footer } from './components/Footer';
 import { fetchAndParseIcal } from './utils/icalParser';
+import { getNightlyPrice, calculateTripPricing } from './utils/pricing';
 import { 
   Calendar as CalendarIcon, 
   MapPin, 
@@ -28,7 +29,8 @@ import {
   Maximize,
   MinusCircle,
   Grid,
-  Loader2
+  Loader2,
+  Info
 } from 'lucide-react';
 import { formatDate } from './utils/dateUtils';
 
@@ -263,21 +265,47 @@ function App() {
 
   // Pricing Calculation
   const getPricing = () => {
-    if (!selectedProperty) return { nights: 0, subtotal: 0, total: 0 };
+    if (!selectedProperty) return { nights: 0, subtotal: 0, total: 0, discountAmount: 0, discountLabel: '' };
     
-    let nights = 0;
     if (searchDateRange.startDate && searchDateRange.endDate) {
-      const diffTime = Math.abs(searchDateRange.endDate.getTime() - searchDateRange.startDate.getTime());
-      nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      return calculateTripPricing(
+        selectedProperty.id, 
+        searchDateRange.startDate, 
+        searchDateRange.endDate
+      );
     }
     
-    // Default to at least 1 night for display if they pick the same day, though usually checks are > 0
-    // If no dates selected, show 0
-    
     return {
-      nights,
-      subtotal: nights * selectedProperty.pricePerNight,
-      total: (nights * selectedProperty.pricePerNight) + 100 // + Cleaning Fee
+      nights: 0,
+      subtotal: 0,
+      discountAmount: 0,
+      discountLabel: '',
+      total: 0
+    };
+  };
+
+  // Helper to generate display price props for cards
+  const getCardPriceDisplay = (propertyId: string) => {
+    // If dates are selected and valid range
+    if (searchDateRange.startDate && searchDateRange.endDate && searchDateRange.startDate < searchDateRange.endDate) {
+      const pricing = calculateTripPricing(propertyId, searchDateRange.startDate, searchDateRange.endDate);
+      if (pricing.nights > 0) {
+        return {
+          amount: `$${Math.ceil(pricing.total)}`,
+          label: 'total',
+          subLabel: `${pricing.nights} nights`,
+          isTotal: true
+        };
+      }
+    }
+    
+    // Default / No dates selected: Show "From $X / night"
+    const todayPrice = getNightlyPrice(propertyId, new Date());
+    return {
+      amount: `$${todayPrice}`,
+      label: '/ night',
+      subLabel: 'From',
+      isTotal: false
     };
   };
 
@@ -287,8 +315,11 @@ function App() {
     e.preventDefault();
     setIsSubmittingBooking(true);
 
+    // Ensure we have a valid total string or '0'
+    const totalValue = pricing.total > 0 ? pricing.total : 0;
+    const estimatedTotalStr = totalValue > 0 ? Math.ceil(totalValue).toString() : '0';
+
     // Standardized Payload to match BookingView
-    // Removing currency symbol from estimatedTotal to ensure clean data parsing in Sheets
     const payload = {
       formType: 'Property Specific Booking',
       name: bookingFormData.name,
@@ -298,8 +329,8 @@ function App() {
       checkIn: searchDateRange.startDate ? formatDate(searchDateRange.startDate) : 'Not specified',
       checkOut: searchDateRange.endDate ? formatDate(searchDateRange.endDate) : 'Not specified',
       interest: selectedProperty?.name || 'Unknown Property',
-      // CRITICAL FIX: Send '0' instead of 'Pending Dates' to strictly satisfy Numeric column types in Sheets/Make
-      estimatedTotal: pricing.subtotal > 0 ? `${pricing.subtotal}` : '0', 
+      // CRITICAL: Send stringified integer or '0' to satisfy Numeric column types in Sheets/Make
+      estimatedTotal: estimatedTotalStr, 
       message: bookingFormData.message
     };
 
@@ -580,6 +611,7 @@ function App() {
                       key={property.id} 
                       property={property} 
                       onViewDetails={handlePropertySelect} 
+                      priceDisplay={getCardPriceDisplay(property.id)}
                     />
                   ))}
                 </div>
@@ -704,7 +736,9 @@ function App() {
                          </div>
                       </div>
                       <div className="mt-4 md:mt-0 text-left md:text-right">
-                         <div className="text-3xl font-bold text-brand-clay">${selectedProperty.pricePerNight}</div>
+                         <div className="text-3xl font-bold text-brand-clay">
+                            From ${getNightlyPrice(selectedProperty.id, new Date())}
+                         </div>
                          <div className="text-sm text-gray-400">per night</div>
                       </div>
                     </div>
@@ -781,7 +815,27 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Booking Form (Moved Here) */}
+                  {/* Availability Calendar Section - Restored/Added Inline */}
+                  <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-brand-sand">
+                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                        <h3 className="text-2xl font-serif font-bold text-brand-dark">Availability & Rates</h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-2 md:mt-0">
+                           <Info size={16} />
+                           <span>Prices may vary by date</span>
+                        </div>
+                     </div>
+                     <div className="max-w-xl mx-auto">
+                        <Calendar 
+                          unavailableDates={selectedProperty.unavailableDates} 
+                          selectedStart={searchDateRange.startDate}
+                          selectedEnd={searchDateRange.endDate}
+                          onSelectDate={handleDetailsDateSelect}
+                          getNightlyPrice={(date) => getNightlyPrice(selectedProperty.id, date)}
+                        />
+                     </div>
+                  </div>
+
+                  {/* Booking Form */}
                   <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-brand-sand">
                     {bookingSuccess ? (
                       <div className="text-center py-12">
@@ -830,6 +884,7 @@ function App() {
                                       selectedStart={searchDateRange.startDate}
                                       selectedEnd={searchDateRange.endDate}
                                       onSelectDate={handleDetailsDateSelect}
+                                      getNightlyPrice={(date) => getNightlyPrice(selectedProperty.id, date)}
                                     />
                                     <div className="p-3 border-t border-gray-50 flex justify-end bg-gray-50/50 rounded-b-lg">
                                        <button 
@@ -916,12 +971,19 @@ function App() {
                         </div>
 
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-gray-100">
-                          <div className="text-center md:text-left">
+                          <div className="text-center md:text-left w-full md:w-auto">
                             <div className="text-sm text-gray-500 mb-1">Total Estimation</div>
                             <div className="text-2xl font-serif font-bold text-brand-dark">
-                               ${pricing.subtotal > 0 ? pricing.subtotal : selectedProperty.pricePerNight} 
-                               <span className="text-base font-normal text-gray-400"> + fees</span>
+                               ${pricing.total > 0 ? Math.ceil(pricing.total) : getNightlyPrice(selectedProperty.id, new Date())} 
+                               <span className="text-base font-normal text-gray-400">
+                                 {pricing.nights > 0 ? ` for ${pricing.nights} nights` : ' / night'}
+                               </span>
                             </div>
+                            {pricing.discountAmount > 0 && (
+                              <div className="text-xs text-green-600 font-medium mt-1">
+                                Saved ${Math.ceil(pricing.discountAmount)} ({pricing.discountLabel})
+                              </div>
+                            )}
                           </div>
                           <button 
                             type="submit"

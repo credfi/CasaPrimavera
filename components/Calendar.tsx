@@ -7,13 +7,15 @@ interface CalendarProps {
   selectedStart: Date | null;
   selectedEnd: Date | null;
   onSelectDate: (date: Date) => void;
+  getNightlyPrice?: (date: Date) => number; // Optional function to get price
 }
 
 export const Calendar: React.FC<CalendarProps> = ({ 
   unavailableDates, 
   selectedStart, 
   selectedEnd, 
-  onSelectDate 
+  onSelectDate,
+  getNightlyPrice
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   
@@ -29,11 +31,15 @@ export const Calendar: React.FC<CalendarProps> = ({
   const months = ["January", "February", "March", "April", "May", "June", 
     "July", "August", "September", "October", "November", "December"];
 
-  const prevMonth = () => {
+  const prevMonth = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
-  const nextMonth = () => {
+  const nextMonth = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
@@ -93,7 +99,7 @@ export const Calendar: React.FC<CalendarProps> = ({
       
       <div className="grid grid-cols-7 gap-1">
         {blanks.map((_, i) => (
-          <div key={`blank-${i}`} className="aspect-square"></div>
+          <div key={`blank-${i}`} className="min-h-[50px]"></div>
         ))}
         
         {days.map(day => {
@@ -101,60 +107,71 @@ export const Calendar: React.FC<CalendarProps> = ({
           const selected = isSelected(day);
           const start = isRangeStart(day);
           const end = isRangeEnd(day);
+          const d = new Date(year, month, day);
           
-          let btnClass = "w-full h-full aspect-square flex items-center justify-center text-sm relative rounded-full transition-all ";
+          let btnClass = "w-full h-full min-h-[50px] flex flex-col items-center justify-center relative rounded-lg transition-all border border-transparent ";
           
           if (blocked) {
-            btnClass += "text-gray-300 cursor-not-allowed decoration-slice";
+            btnClass += "text-gray-300 cursor-not-allowed decoration-slice bg-gray-50";
           } else if (selected) {
             if (start || end) {
-               btnClass += "bg-brand-clay text-white font-bold z-10 hover:bg-brand-terra ";
+               btnClass += "bg-brand-clay text-white font-bold z-10 hover:bg-brand-terra shadow-md";
             } else {
-               btnClass += "bg-brand-clay/10 text-brand-clay font-medium rounded-none ";
+               btnClass += "bg-brand-clay/10 text-brand-clay font-medium rounded-none";
             }
           } else {
-            btnClass += "text-gray-700 hover:bg-gray-100 font-medium ";
+            btnClass += "text-gray-700 hover:bg-gray-50 hover:border-gray-200 font-medium";
           }
           
+          const price = !blocked && getNightlyPrice ? getNightlyPrice(d) : null;
+
           return (
-            <div key={day} className="aspect-square relative p-0.5">
+            <div key={day} className="aspect-square relative p-[1px]">
                {selected && !start && !end && !blocked && (
-                 <div className="absolute inset-y-0.5 inset-x-0 bg-brand-clay/10 z-0" />
+                 <div className="absolute inset-y-[1px] inset-x-0 bg-brand-clay/10 z-0" />
                )}
                {start && selectedEnd && (
-                 <div className="absolute inset-y-0.5 right-0 w-1/2 bg-brand-clay/10 z-0" />
+                 <div className="absolute inset-y-[1px] right-0 w-1/2 bg-brand-clay/10 z-0" />
                )}
                {end && selectedStart && (
-                 <div className="absolute inset-y-0.5 left-0 w-1/2 bg-brand-clay/10 z-0" />
+                 <div className="absolute inset-y-[1px] left-0 w-1/2 bg-brand-clay/10 z-0" />
                )}
                
               <button 
-                onClick={() => !blocked && onSelectDate(new Date(year, month, day))}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!blocked) onSelectDate(d);
+                }}
                 disabled={blocked}
                 className={btnClass}
               >
-                {blocked && <span className="absolute w-full h-[1px] bg-gray-300 rotate-45"></span>}
-                <span className="relative z-10">{day}</span>
+                {blocked && <span className="absolute w-2/3 h-[1px] bg-gray-300 rotate-45"></span>}
+                <span className={`relative z-10 text-sm ${price ? '-mt-1' : ''}`}>{day}</span>
+                {price && (
+                  <span className={`text-[10px] font-normal mt-0.5 ${selected && (start || end) ? 'text-white/90' : 'text-gray-500'}`}>
+                    ${price}
+                  </span>
+                )}
               </button>
             </div>
           );
         })}
       </div>
       
-      <div className="mt-6 flex items-center space-x-4 text-xs text-gray-500">
+      <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-gray-500">
         <div className="flex items-center space-x-1">
-          <div className="w-3 h-3 rounded-full bg-brand-clay"></div>
+          <div className="w-3 h-3 rounded bg-brand-clay"></div>
           <span>Selected</span>
         </div>
         <div className="flex items-center space-x-1">
-          <div className="w-3 h-3 rounded-full border border-gray-200"></div>
+          <div className="w-3 h-3 rounded border border-gray-200"></div>
           <span>Available</span>
         </div>
         <div className="flex items-center space-x-1">
-          <div className="w-3 h-3 rounded-full bg-gray-100 text-gray-300 flex items-center justify-center relative overflow-hidden">
+          <div className="w-3 h-3 rounded bg-gray-50 text-gray-300 flex items-center justify-center relative overflow-hidden">
              <div className="w-full h-[1px] bg-gray-300 rotate-45 absolute"></div>
           </div>
-          <span>Booked/Unavailable</span>
+          <span>Unavailable</span>
         </div>
       </div>
     </div>

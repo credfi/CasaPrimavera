@@ -5,9 +5,15 @@ import { Users, Bed, Home, Star, Sun, Maximize, MinusCircle, ChevronLeft, Chevro
 interface PropertyCardProps {
   property: Property;
   onViewDetails: (property: Property) => void;
+  priceDisplay?: {
+    amount: string;
+    label: string;
+    subLabel?: string;
+    isTotal?: boolean;
+  };
 }
 
-export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDetails }) => {
+export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDetails, priceDisplay }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -156,9 +162,26 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDeta
         </p>
         
         <div className="flex items-center justify-between mt-auto">
-          <div>
-            <span className="text-xl font-bold text-brand-terra">${property.pricePerNight}</span>
-            <span className="text-gray-400 text-sm"> / night</span>
+          <div className="flex flex-col">
+            {priceDisplay ? (
+               <>
+                 {priceDisplay.subLabel && (
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                      {priceDisplay.subLabel}
+                    </span>
+                 )}
+                 <div>
+                   <span className="text-xl font-bold text-brand-terra">{priceDisplay.amount}</span>
+                   <span className={`text-sm ${priceDisplay.isTotal ? 'text-gray-700 font-medium' : 'text-gray-400'}`}> {priceDisplay.label}</span>
+                 </div>
+               </>
+            ) : (
+               /* Fallback if no prop provided */
+               <div>
+                  <span className="text-xl font-bold text-brand-terra">${property.pricePerNight}</span>
+                  <span className="text-gray-400 text-sm"> / night</span>
+               </div>
+            )}
           </div>
           <button 
             onClick={() => onViewDetails(property)}

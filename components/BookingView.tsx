@@ -93,7 +93,7 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
       checkIn: dateRange.startDate ? formatDate(dateRange.startDate) : 'Not specified',
       checkOut: dateRange.endDate ? formatDate(dateRange.endDate) : 'Not specified',
       interest: formData.roomPreference || 'No Preference',
-      // CRITICAL FIX: Send '0' instead of text 'Pending Quote' to prevent 500 errors on Numeric columns
+      // CRITICAL FIX: Send '0' instead of text 'Pending Quote' to strictly satisfy Numeric column types
       estimatedTotal: '0',
       message: formData.message
     };
