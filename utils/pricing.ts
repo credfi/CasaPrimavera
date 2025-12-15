@@ -48,13 +48,13 @@ const getBasePrice = (propertyId: string, date: Date): number => {
 
   if (isHighSeason) {
     if (TIER_1_IDS.includes(propertyId)) return 50;
-    if (TIER_2_IDS.includes(propertyId)) return 44;
-    return 40; // Tier 3
+    if (TIER_2_IDS.includes(propertyId)) return 40; // Rooms 4 & 9
+    return 44; // Rooms 5–8 & 10
   } else {
     // Low Season
     if (TIER_1_IDS.includes(propertyId)) return 34;
-    if (TIER_2_IDS.includes(propertyId)) return 32;
-    return 30; // Tier 3
+    if (TIER_2_IDS.includes(propertyId)) return 30; // Rooms 4 & 9
+    return 32; // Rooms 5–8 & 10
   }
 };
 
