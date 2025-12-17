@@ -108,17 +108,17 @@ export const calculateTripPricing = (propertyId: string, startDate: Date, endDat
   }
 
   // Length of Stay Discounts
-  // 7–27 nights: –15%
-  // 28+ nights: –30%
+  // 7–27 nights: –20%
+  // 28+ nights: –50%
   let discountMultiplier = 1;
   let discountLabel = '';
 
   if (nights >= 28) {
-    discountMultiplier = 0.70;
-    discountLabel = 'Monthly Discount (30%)';
+    discountMultiplier = 0.50;
+    discountLabel = 'Monthly Discount (50%)';
   } else if (nights >= 7) {
-    discountMultiplier = 0.85;
-    discountLabel = 'Weekly Discount (15%)';
+    discountMultiplier = 0.80;
+    discountLabel = 'Weekly Discount (20%)';
   }
 
   const finalTotal = subtotal * discountMultiplier;

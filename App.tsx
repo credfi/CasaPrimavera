@@ -898,8 +898,8 @@ function App() {
                               Long Stay Discounts Available
                            </div>
                            <div className="text-gray-600 flex gap-4">
-                              <span>7+ Nights: <span className="text-brand-clay font-bold">15% OFF</span></span>
-                              <span>28+ Nights: <span className="text-brand-clay font-bold">30% OFF</span></span>
+                              <span>7+ Nights: <span className="text-brand-clay font-bold">20% OFF</span></span>
+                              <span>28+ Nights: <span className="text-brand-clay font-bold">50% OFF</span></span>
                            </div>
                         </div>
                      </div>
