@@ -80,59 +80,66 @@ function App() {
 
   // --- ROUTING LOGIC ---
 
-  // Helper to determine view based on hash
-  const getRouteFromHash = (hash: string, allProperties: Property[]) => {
-    if (hash.startsWith('#property/')) {
-      const id = hash.replace('#property/', '');
+  // Helper to determine view based on path
+  const getRouteFromPath = (path: string, allProperties: Property[]) => {
+    // Normalize path by removing trailing slash if it exists (unless root)
+    const normalizedPath = path.endsWith('/') && path !== '/' ? path.slice(0, -1) : path;
+
+    if (normalizedPath.startsWith('/property/')) {
+      const id = normalizedPath.split('/property/')[1];
       const prop = allProperties.find(p => p.id === id);
       return { view: 'DETAILS' as View, property: prop || null };
     }
-    if (hash === '#guide') return { view: 'RECOMMENDATIONS' as View, property: null };
-    if (hash === '#location') return { view: 'LOCATION' as View, property: null };
-    if (hash === '#faq') return { view: 'FAQ' as View, property: null };
-    if (hash === '#booking') return { view: 'BOOKING' as View, property: null };
+    if (normalizedPath === '/guide') return { view: 'RECOMMENDATIONS' as View, property: null };
+    if (normalizedPath === '/location') return { view: 'LOCATION' as View, property: null };
+    if (normalizedPath === '/faq') return { view: 'FAQ' as View, property: null };
+    if (normalizedPath === '/booking') return { view: 'BOOKING' as View, property: null };
     return { view: 'HOME' as View, property: null };
   };
 
-  // Effect to listen to URL hash changes (Navigation)
+  // Internal navigation helper to use History API
+  const navigateTo = (path: string) => {
+    window.history.pushState({}, '', path);
+    const { view: newView, property: newProp } = getRouteFromPath(path, properties);
+    
+    setView(newView);
+    
+    if (newView === 'DETAILS' && newProp) {
+        setSelectedProperty(newProp);
+        // Reset specific states if changing property
+        setHeroImageIndex(0);
+        setBookingSuccess(false);
+        setBookingFormData({ name: '', email: '', phone: '', guests: '1', message: '' });
+    } else {
+        setSelectedProperty(null);
+    }
+    
+    window.scrollTo(0, 0);
+  };
+
+  // Effect to listen to PopState (Back/Forward button)
   useEffect(() => {
-    const handleHashChange = () => {
-      const { view: newView, property: newProp } = getRouteFromHash(window.location.hash, properties);
+    const handlePopState = () => {
+      const { view: newView, property: newProp } = getRouteFromPath(window.location.pathname, properties);
       
       // Update View
       setView(newView);
       
       // Update Property Selection if needed
       if (newView === 'DETAILS' && newProp) {
-        setSelectedProperty((current) => {
-          // If switching to a different property, reset form/hero
-          if (current?.id !== newProp.id) {
-             setHeroImageIndex(0);
-             setBookingSuccess(false);
-             setBookingFormData({ name: '', email: '', phone: '', guests: '1', message: '' });
-             return newProp;
-          }
-          // If same property (e.g. data update), just return new object to ensure data freshness
-          return newProp;
-        });
+        setSelectedProperty(newProp);
       } else {
         setSelectedProperty(null);
       }
-
-      // Scroll to top on navigation (optional, but good UX)
-      // We check if the view changed to avoid jumping when 'properties' updates in background
-      if (newView !== view) {
-         window.scrollTo(0, 0);
-      }
     };
 
-    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
     
-    // Run once on mount/update to sync initial state
-    handleHashChange();
+    // Check initial URL on mount/update to sync state
+    handlePopState();
 
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [properties]); // Re-run when properties update (to ensure we have latest data/availability)
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [properties]); // Re-run when properties update
 
 
   // Handle click outside to close date pickers
@@ -166,8 +173,6 @@ function App() {
         })
       );
       setProperties(updatedProperties);
-      // Note: We don't need to manually update selectedProperty here anymore. 
-      // The routing useEffect depends on [properties] and will automatically refresh selectedProperty if needed.
     };
 
     syncCalendars();
@@ -286,37 +291,35 @@ function App() {
   // --- NAVIGATION HANDLERS ---
   
   const handlePropertySelect = (property: Property) => {
-    // Update URL hash - let useEffect handle the state change
-    window.location.hash = `property/${property.id}`;
+    navigateTo(`/property/${property.id}`);
   };
 
   const handleBackToHome = () => {
-    window.location.hash = '';
+    navigateTo('/');
   };
 
   const handleNavigate = (targetView: View) => {
-    // Map internal View enum to URL hashes
     switch(targetView) {
       case 'HOME':
-        window.location.hash = '';
+        navigateTo('/');
         break;
       case 'RECOMMENDATIONS':
-        window.location.hash = 'guide';
+        navigateTo('/guide');
         break;
       case 'LOCATION':
-        window.location.hash = 'location';
+        navigateTo('/location');
         break;
       case 'FAQ':
-        window.location.hash = 'faq';
+        navigateTo('/faq');
         break;
       case 'BOOKING':
-        window.location.hash = 'booking';
+        navigateTo('/booking');
         break;
       case 'DETAILS':
-        // DETAILS usually requires an ID, so generic nav to details isn't common without ID
+        // No generic path for DETAILS without ID, handled via property selection
         break;
     }
-    // Mobile menu closing is handled in UI
+    // Mobile menu closing is handled in UI render logic
   };
 
   const handleBookingFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
