@@ -351,7 +351,7 @@ function App() {
       const pricing = calculateTripPricing(propertyId, searchDateRange.startDate, searchDateRange.endDate);
       if (pricing.nights > 0) {
         return {
-          amount: `$${Math.ceil(pricing.total)}`,
+          amount: `$${Math.ceil(pricing.total)} USD`,
           label: 'total',
           subLabel: `${pricing.nights} nights`,
           isTotal: true
@@ -362,7 +362,7 @@ function App() {
     // Default / No dates selected: Show "From $X / night"
     const todayPrice = getNightlyPrice(propertyId, new Date());
     return {
-      amount: `$${todayPrice}`,
+      amount: `$${todayPrice} USD`,
       label: '/ night',
       subLabel: 'From',
       isTotal: false
@@ -630,7 +630,7 @@ function App() {
                         />
                         <div className="p-4 border-t border-gray-50 flex justify-between items-center bg-gray-50/50 rounded-b-xl">
                           <span className="text-xs text-gray-400 font-medium italic">
-                            Select check-in and check-out dates
+                            Select check-in and check-out dates (All prices in USD)
                           </span>
                            <button 
                              onClick={(e) => {
@@ -655,8 +655,7 @@ function App() {
                 <div>
                   <h3 className="text-3xl font-serif font-bold text-brand-dark mb-3">Our Collection</h3>
                   <p className="text-gray-500 max-w-xl">
-                    Explore our 10 unique properties across three distinct room types, ranging from different balcony sizes to unique room layouts. 
-                    All properties feature our signature boho style and are ideally located on the peaceful south side of town.
+                    Explore our 10 unique properties across three distinct room types. All properties feature our signature boho style and are priced in USD for your convenience.
                   </p>
                 </div>
                 <div className="hidden md:block text-sm text-gray-400">
@@ -797,7 +796,7 @@ function App() {
                       </div>
                       <div className="mt-4 md:mt-0 text-left md:text-right">
                          <div className="text-3xl font-bold text-brand-clay">
-                            From ${getNightlyPrice(selectedProperty.id, new Date())}
+                            From ${getNightlyPrice(selectedProperty.id, new Date())} USD
                          </div>
                          <div className="text-sm text-gray-400">per night</div>
                       </div>
@@ -860,7 +859,7 @@ function App() {
                       </ul>
 
                       <p className="mt-6 italic text-gray-500">
-                        Experience the ultimate in relaxation. This property is professionally managed by the Casa Primavera team, ensuring high standards of cleanliness and comfort.
+                        Experience the ultimate in relaxation. This property is professionally managed by the Casa Primavera team, ensuring high standards of cleanliness and comfort. All rates are listed in USD.
                       </p>
                     </div>
                     
@@ -878,7 +877,7 @@ function App() {
                   {/* Availability Calendar Section - Restored/Added Inline */}
                   <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-brand-sand">
                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                        <h3 className="text-2xl font-serif font-bold text-brand-dark">Availability & Rates</h3>
+                        <h3 className="text-2xl font-serif font-bold text-brand-dark">Availability & Rates (USD)</h3>
                         <div className="flex items-center gap-2 text-sm text-gray-500 mt-2 md:mt-0">
                            <Info size={16} />
                            <span>Prices may vary by date</span>
@@ -895,7 +894,7 @@ function App() {
                         <div className="mt-6 flex flex-col items-center justify-center space-y-1 text-sm bg-brand-sand/30 p-4 rounded-xl border border-brand-sand/50">
                            <div className="font-bold text-brand-dark flex items-center gap-2">
                               <span className="w-2 h-2 rounded-full bg-brand-clay"></span>
-                              Long Stay Discounts Available
+                              Long Stay Discounts Available (USD)
                            </div>
                            <div className="text-gray-600 flex gap-4">
                               <span>7+ Nights: <span className="text-brand-clay font-bold">20% OFF</span></span>
@@ -1042,16 +1041,16 @@ function App() {
 
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-gray-100">
                           <div className="text-center md:text-left w-full md:w-auto">
-                            <div className="text-sm text-gray-500 mb-1">Total Estimation</div>
+                            <div className="text-sm text-gray-500 mb-1">Total Estimation (USD)</div>
                             <div className="text-2xl font-serif font-bold text-brand-dark">
-                               ${pricing.total > 0 ? Math.ceil(pricing.total) : getNightlyPrice(selectedProperty.id, new Date())} 
+                               ${pricing.total > 0 ? Math.ceil(pricing.total) : getNightlyPrice(selectedProperty.id, new Date())} USD
                                <span className="text-base font-normal text-gray-400">
                                  {pricing.nights > 0 ? ` for ${pricing.nights} nights` : ' / night'}
                                </span>
                             </div>
                             {pricing.discountAmount > 0 && (
                               <div className="text-xs text-green-600 font-medium mt-1">
-                                Saved ${Math.ceil(pricing.discountAmount)} ({pricing.discountLabel})
+                                Saved ${Math.ceil(pricing.discountAmount)} USD ({pricing.discountLabel})
                               </div>
                             )}
                           </div>

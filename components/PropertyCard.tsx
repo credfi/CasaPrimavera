@@ -178,7 +178,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onViewDeta
             ) : (
                /* Fallback if no prop provided */
                <div>
-                  <span className="text-xl font-bold text-brand-terra">${property.pricePerNight}</span>
+                  <span className="text-xl font-bold text-brand-terra">${property.pricePerNight} USD</span>
                   <span className="text-gray-400 text-sm"> / night</span>
                </div>
             )}
