@@ -28,7 +28,6 @@ import {
   Sun,
   Maximize,
   MinusCircle,
-  Grid,
   Loader2,
   Info
 } from 'lucide-react';
@@ -79,6 +78,63 @@ function App() {
   const [heroTouchStart, setHeroTouchStart] = useState<number | null>(null);
   const [heroTouchEnd, setHeroTouchEnd] = useState<number | null>(null);
 
+  // --- ROUTING LOGIC ---
+
+  // Helper to determine view based on hash
+  const getRouteFromHash = (hash: string, allProperties: Property[]) => {
+    if (hash.startsWith('#property/')) {
+      const id = hash.replace('#property/', '');
+      const prop = allProperties.find(p => p.id === id);
+      return { view: 'DETAILS' as View, property: prop || null };
+    }
+    if (hash === '#guide') return { view: 'RECOMMENDATIONS' as View, property: null };
+    if (hash === '#location') return { view: 'LOCATION' as View, property: null };
+    if (hash === '#faq') return { view: 'FAQ' as View, property: null };
+    if (hash === '#booking') return { view: 'BOOKING' as View, property: null };
+    return { view: 'HOME' as View, property: null };
+  };
+
+  // Effect to listen to URL hash changes (Navigation)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const { view: newView, property: newProp } = getRouteFromHash(window.location.hash, properties);
+      
+      // Update View
+      setView(newView);
+      
+      // Update Property Selection if needed
+      if (newView === 'DETAILS' && newProp) {
+        setSelectedProperty((current) => {
+          // If switching to a different property, reset form/hero
+          if (current?.id !== newProp.id) {
+             setHeroImageIndex(0);
+             setBookingSuccess(false);
+             setBookingFormData({ name: '', email: '', phone: '', guests: '1', message: '' });
+             return newProp;
+          }
+          // If same property (e.g. data update), just return new object to ensure data freshness
+          return newProp;
+        });
+      } else {
+        setSelectedProperty(null);
+      }
+
+      // Scroll to top on navigation (optional, but good UX)
+      // We check if the view changed to avoid jumping when 'properties' updates in background
+      if (newView !== view) {
+         window.scrollTo(0, 0);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // Run once on mount/update to sync initial state
+    handleHashChange();
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [properties]); // Re-run when properties update (to ensure we have latest data/availability)
+
+
   // Handle click outside to close date pickers
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -110,12 +166,8 @@ function App() {
         })
       );
       setProperties(updatedProperties);
-      
-      // Also update selectedProperty if it exists and was updated
-      if (selectedProperty) {
-         const updatedSelected = updatedProperties.find(p => p.id === selectedProperty.id);
-         if (updatedSelected) setSelectedProperty(updatedSelected);
-      }
+      // Note: We don't need to manually update selectedProperty here anymore. 
+      // The routing useEffect depends on [properties] and will automatically refresh selectedProperty if needed.
     };
 
     syncCalendars();
@@ -231,32 +283,40 @@ function App() {
     });
   };
 
+  // --- NAVIGATION HANDLERS ---
+  
   const handlePropertySelect = (property: Property) => {
-    setSelectedProperty(property);
-    setHeroImageIndex(0);
-    // Reset booking form state when opening a new property
-    setBookingFormData({ name: '', email: '', phone: '', guests: '1', message: '' });
-    setBookingSuccess(false);
-    setView('DETAILS');
-    window.scrollTo(0, 0);
+    // Update URL hash - let useEffect handle the state change
+    window.location.hash = `property/${property.id}`;
   };
 
   const handleBackToHome = () => {
-    setView('HOME');
-    setSelectedProperty(null);
-    setHeroImageIndex(0);
-    setBookingSuccess(false);
-    window.scrollTo(0, 0);
+    window.location.hash = '';
   };
 
   const handleNavigate = (targetView: View) => {
-    setView(targetView);
-    if (targetView === 'HOME') {
-      setSelectedProperty(null);
-      setHeroImageIndex(0);
-      setBookingSuccess(false);
+    // Map internal View enum to URL hashes
+    switch(targetView) {
+      case 'HOME':
+        window.location.hash = '';
+        break;
+      case 'RECOMMENDATIONS':
+        window.location.hash = 'guide';
+        break;
+      case 'LOCATION':
+        window.location.hash = 'location';
+        break;
+      case 'FAQ':
+        window.location.hash = 'faq';
+        break;
+      case 'BOOKING':
+        window.location.hash = 'booking';
+        break;
+      case 'DETAILS':
+        // DETAILS usually requires an ID, so generic nav to details isn't common without ID
+        break;
     }
-    window.scrollTo(0, 0);
+    // Mobile menu closing is handled in UI
   };
 
   const handleBookingFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -443,25 +503,25 @@ function App() {
                 Properties
               </button>
               <button 
-                onClick={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }} 
+                onClick={() => handleNavigate('RECOMMENDATIONS')} 
                 className={`text-sm font-medium transition-colors ${view === 'RECOMMENDATIONS' ? 'text-brand-clay' : 'hover:text-brand-clay'}`}
               >
                 Local Guide
               </button>
               <button 
-                onClick={() => { setView('LOCATION'); window.scrollTo(0, 0); }} 
+                onClick={() => handleNavigate('LOCATION')} 
                 className={`text-sm font-medium transition-colors ${view === 'LOCATION' ? 'text-brand-clay' : 'hover:text-brand-clay'}`}
               >
                 Location
               </button>
                <button 
-                onClick={() => { setView('FAQ'); window.scrollTo(0, 0); }} 
+                onClick={() => handleNavigate('FAQ')} 
                 className={`text-sm font-medium transition-colors ${view === 'FAQ' ? 'text-brand-clay' : 'hover:text-brand-clay'}`}
               >
                 FAQ
               </button>
               <button 
-                onClick={() => { setView('BOOKING'); window.scrollTo(0, 0); }}
+                onClick={() => handleNavigate('BOOKING')}
                 className="px-5 py-2.5 bg-brand-dark text-white text-sm font-semibold rounded-full hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20"
               >
                 Booking Request
@@ -481,10 +541,10 @@ function App() {
         {isMenuOpen && (
           <div className="md:hidden bg-white border-b border-gray-100 px-4 py-4 space-y-4">
              <button onClick={() => { handleBackToHome(); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Properties</button>
-             <button onClick={() => { setView('RECOMMENDATIONS'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Local Guide</button>
-             <button onClick={() => { setView('LOCATION'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Location</button>
-             <button onClick={() => { setView('FAQ'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">FAQ</button>
-             <button onClick={() => { setView('BOOKING'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Booking Request</button>
+             <button onClick={() => { handleNavigate('RECOMMENDATIONS'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Local Guide</button>
+             <button onClick={() => { handleNavigate('LOCATION'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Location</button>
+             <button onClick={() => { handleNavigate('FAQ'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">FAQ</button>
+             <button onClick={() => { handleNavigate('BOOKING'); setIsMenuOpen(false); }} className="block w-full text-left font-medium py-2">Booking Request</button>
           </div>
         )}
       </nav>
@@ -658,11 +718,11 @@ function App() {
         )}
 
         {view === 'FAQ' && (
-          <FAQView onContactClick={() => { setView('BOOKING'); window.scrollTo(0, 0); }} />
+          <FAQView onContactClick={() => handleNavigate('BOOKING')} />
         )}
         
         {view === 'BOOKING' && (
-          <BookingView onNavigateToGuide={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }} />
+          <BookingView onNavigateToGuide={() => handleNavigate('RECOMMENDATIONS')} />
         )}
 
         {view === 'DETAILS' && selectedProperty && (
@@ -859,7 +919,7 @@ function App() {
                           In the meantime, check out our local guide for more information on Sayulita and what it has to offer.
                         </p>
                         <button 
-                          onClick={() => { setView('RECOMMENDATIONS'); window.scrollTo(0, 0); }}
+                          onClick={() => handleNavigate('RECOMMENDATIONS')}
                           className="text-brand-clay font-bold hover:underline inline-flex items-center gap-1"
                         >
                           View Local Guide <ArrowRight size={16} />
