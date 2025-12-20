@@ -1,19 +1,12 @@
 import { Property } from './types';
 
-// Helper to generate some fake blocked dates
-const getFutureDate = (daysToAdd: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() + daysToAdd);
-  return date.toISOString().split('T')[0];
-};
+const INTRO_DESCRIPTION = `Casa Primavera - A hip boutique stay offering an unforgettable direct-booking experience in the heart of Sayulita! 
 
-const INTRO_DESCRIPTION = `Primavera - A hip new accommodation offering guests an unforgettable Sayulita experience! Only a few blocks to The Sayulita Plaza & Main Beach, Primavera was strategically built with proximity in mind. Offering guests a premier location close to all the hotspots, yet tucked away to encompass a peaceful nights slumber. 
+Located on the peaceful South Side, Primavera was strategically built for those seeking proximity to local hotspots while enjoying a tranquil jungle backdrop. We are just a short walk to the Sayulita Plaza and Main Beach, making us one of the best-located boho rentals in town.
 
-If your heart desires a great location close to local hotspots, tasty restaurants, and Sayulita's main beach... This might be the place for you!
+If you are looking for long-term rentals in Sayulita or affordable monthly stays, Casa Primavera offers the perfect blend of style, comfort, and community. 
 
-You'll love it here!! 
-
-A Boutique Airbnb Stay, Encompassing the Boho Sayulita Vibe and Lifestyle.`;
+A Boutique Airbnb-style stay, encompassing the authentic Boho Sayulita lifestyle. Book directly with us for the best rates on weekly and monthly rentals.`;
 
 const CORE_FEATURES = [
   'King Size Pillow-Top Mattress with Cotton Bedding',
@@ -34,23 +27,20 @@ const CORE_FEATURES_QUEEN = [
   ...CORE_FEATURES.slice(1)
 ];
 
-// Features for rooms with Large Terrace (1-3)
 const FEATURES_LARGE_TERRACE = [
   'Dual Sliding patio doors with screens',
   'Private Large Terrace with lush backdrop',
   ...CORE_FEATURES
 ];
 
-// Features for rooms with Small Balcony (5,6,7,8,10)
 const FEATURES_SMALL_BALCONY = [
   'Sliding patio doors with screens',
   'Small Balcony with lush backdrop',
   ...CORE_FEATURES
 ];
 
-// Features for rooms with No Balcony (4,9)
 const FEATURES_NO_BALCONY_QUEEN = [
-  'Large windows with jungle views', // Replaced patio doors
+  'Large windows with jungle views',
   ...CORE_FEATURES_QUEEN
 ];
 
@@ -69,15 +59,12 @@ export const AMENITIES_LIST = [
   'Air Conditioning', 'WiFi', 'Workspace', 'Room Safe'
 ];
 
-// Shared bathroom images for all suites
 const SHARED_BATHROOM_IMAGES = [
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/bathroom-high%20res-0780.jpg',
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/bathroom-high%20res-0783.jpg',
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/bathroom-high%20res-2.jpg'
 ];
 
-// Shared images for Suites 1-3
-// Using the raw GitHub content URL for permanent access
 const SUITE_1_3_IMAGES = [
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/123-header.jpg',
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/123-2.jpg',
@@ -90,7 +77,6 @@ const SUITE_1_3_IMAGES = [
   ...SHARED_BATHROOM_IMAGES
 ];
 
-// Shared images for Suites 4, 9
 const SUITE_4_9_IMAGES = [
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-header.jpg',
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-2.jpg',
@@ -102,7 +88,6 @@ const SUITE_4_9_IMAGES = [
   ...SHARED_BATHROOM_IMAGES
 ];
 
-// Shared images for Suites 5, 10
 const SUITE_5_10_IMAGES = [
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-header-5-10.jpg',
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/5-10-med%20res--2.jpg',
@@ -116,7 +101,6 @@ const SUITE_5_10_IMAGES = [
   ...SHARED_BATHROOM_IMAGES
 ];
 
-// Shared images for Suites 6, 7, 8
 const SUITE_6_7_8_IMAGES = [
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/header-7-8-9.jpg',
   'https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/789-2.jpg',

@@ -2,8 +2,15 @@ export const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
+/**
+ * Returns a YYYY-MM-DD string based on local date components.
+ * This avoids the timezone shift that occurs with .toISOString()
+ */
 export const toISODate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 };
 
 export const getDaysInMonth = (month: number, year: number): number => {
@@ -33,9 +40,10 @@ export const isDateBlocked = (date: Date, blockedISODates: string[]): boolean =>
 
 export const isDateInRange = (date: Date, start: Date | null, end: Date | null): boolean => {
   if (!start || !end) return false;
-  // Normalize to midnight for comparison
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  const s = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
-  const e = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+  
+  const d = toISODate(date);
+  const s = toISODate(start);
+  const e = toISODate(end);
+  
   return d >= s && d <= e;
 };
