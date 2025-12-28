@@ -621,7 +621,7 @@ function App() {
                            <div className="font-bold text-brand-dark flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-brand-clay"></span>Direct Booking & Long Stay Discounts</div>
                            <div className="text-gray-600 flex gap-4">
                               <span>7+ Nights: <span className="text-brand-clay font-bold">20% OFF</span></span>
-                              <span>28+ Nights: <span className="text-brand-clay font-bold">50% OFF</span></span>
+                              <span>28+ Nights: <span className="text-brand-clay font-bold">40% OFF</span></span>
                            </div>
                         </div>
                      </div>
