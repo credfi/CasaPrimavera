@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { PROPERTIES, AMENITIES_LIST } from './constants';
 import { Property, DateRange, View } from './types';
@@ -326,7 +327,7 @@ function App() {
       formType: 'Property Specific Booking',
       name: bookingFormData.name,
       email: bookingFormData.email,
-      phone: bookingFormData.phone,
+      phone: bookingFormData.phone.replace('+', ''),
       guests: bookingFormData.guests,
       checkIn: searchDateRange.startDate ? formatDate(searchDateRange.startDate) : 'Not specified',
       checkOut: searchDateRange.endDate ? formatDate(searchDateRange.endDate) : 'Not specified',
@@ -658,7 +659,22 @@ function App() {
                              <div><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email</label><input name="email" value={bookingFormData.email} onChange={handleBookingFormChange} required type="email" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="john@example.com" /></div>
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone</label><input name="phone" value={bookingFormData.phone} onChange={handleBookingFormChange} required type="tel" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" placeholder="+1 (555) 000-0000" /></div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">WhatsApp Phone (With Country Code)</label>
+                                <div className="relative">
+                                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">+</span>
+                                  <input 
+                                    name="phone" 
+                                    value={bookingFormData.phone} 
+                                    onChange={handleBookingFormChange} 
+                                    required 
+                                    type="tel" 
+                                    className="w-full p-4 pl-8 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                    placeholder="52 322 140 6649" 
+                                  />
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-medium block mt-1 leading-tight">Enter your country code followed by your phone number (e.g., 1 for USA/Canada). Do not include the '+' symbol.</span>
+                              </div>
                               <div><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Guests</label><select name="guests" value={bookingFormData.guests} onChange={handleBookingFormChange} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all"><option value="1">1 Guest</option><option value="2">2 Guests</option></select></div>
                            </div>
                            <div><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Message</label><textarea name="message" value={bookingFormData.message} onChange={handleBookingFormChange} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all h-32 resize-none" placeholder="Special requests or long-term stay inquiry..."></textarea></div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { CheckCircle, ArrowRight, MessageCircle, Calendar as CalendarIcon, X, Loader2 } from 'lucide-react';
 import { Calendar } from './Calendar';
@@ -87,20 +88,18 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
       formType: 'General Booking Request',
       name: formData.name,
       email: formData.email,
-      phone: formData.phone,
-      // CRITICAL FIX: Ensure guests is numeric (strip '+') to prevent 500 errors if column is Number type
+      phone: formData.phone.replace('+', ''),
+      // Ensure guests is numeric to prevent 500 errors if column is Number type
       guests: formData.guests.replace('+', ''), 
       checkIn: dateRange.startDate ? formatDate(dateRange.startDate) : 'Not specified',
       checkOut: dateRange.endDate ? formatDate(dateRange.endDate) : 'Not specified',
       interest: formData.roomPreference || 'No Preference',
-      // CRITICAL FIX: Send '0' instead of text 'Pending Quote' to strictly satisfy Numeric column types
+      // Send '0' instead of text 'Pending Quote' to strictly satisfy Numeric column types
       estimatedTotal: '0',
       message: formData.message
     };
 
     try {
-      // NOTE: Standard application/json request.
-      // This requires the 'Webhook Response' module in Make to handle CORS.
       const response = await fetch('https://hook.us2.make.com/v1j91fq2snhxiwzi5dxcgibvyu4xyjgg', {
         method: 'POST',
         headers: { 
@@ -116,9 +115,8 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
         setFormData({ name: '', email: '', phone: '', guests: '1', roomPreference: '', message: '' });
         setDateRange({ startDate: null, endDate: null });
       } else {
-        // Explicit error handling for Make.com states
         if (response.status === 404 || response.status === 500) {
-          throw new Error("Make.com Scenario Error: The scenario is likely stopped/offline. Please go to Make.com and turn the scenario 'ON' (or click Run Once).");
+          throw new Error("Make.com Scenario Error: The scenario is likely stopped/offline.");
         }
         throw new Error(`Server responded with ${response.status}`);
       }
@@ -272,16 +270,20 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone Number</label>
-                                <input 
-                                  name="phone"
-                                  value={formData.phone}
-                                  onChange={handleInputChange}
-                                  required 
-                                  type="tel" 
-                                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
-                                  placeholder="+1 (555) 000-0000" 
-                                />
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">WhatsApp Phone (With Country Code)</label>
+                                <div className="relative">
+                                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">+</span>
+                                  <input 
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                    required 
+                                    type="tel"
+                                    className="w-full p-4 pl-8 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-clay focus:border-transparent outline-none transition-all" 
+                                    placeholder="52 322 140 6649" 
+                                  />
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-medium block mt-1 leading-tight">Enter your country code followed by your phone number (e.g., 1 for USA/Canada). Do not include the '+' symbol.</span>
                             </div>
 
                             <div>
@@ -345,7 +347,6 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
                         )}
                       </button>
                       
-                      {/* WhatsApp Integration */}
                       <div className="mt-8 pt-6 border-t border-gray-100 text-center">
                           <p className="text-sm text-gray-500 mb-3 font-medium">Want to contact us via WhatsApp? Please do so here.</p>
                           <a 
