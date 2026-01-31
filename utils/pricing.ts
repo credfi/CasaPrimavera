@@ -1,3 +1,4 @@
+
 import { Property } from '../types';
 
 // Constants
@@ -47,9 +48,9 @@ const getBasePrice = (propertyId: string, date: Date): number => {
   }
 
   if (isHighSeason) {
-    if (TIER_1_IDS.includes(propertyId)) return 50;
-    if (TIER_2_IDS.includes(propertyId)) return 40; // Rooms 4 & 9
-    return 44; // Rooms 5–8 & 10
+    if (TIER_1_IDS.includes(propertyId)) return 56;
+    if (TIER_2_IDS.includes(propertyId)) return 48; // Rooms 4 & 9 (Assuming 5 was a typo in user prompt as it's in Tier 3)
+    return 52; // Rooms 5–8 & 10 (Tier 3)
   } else {
     // Low Season
     if (TIER_1_IDS.includes(propertyId)) return 34;
@@ -108,7 +109,7 @@ export const calculateTripPricing = (propertyId: string, startDate: Date, endDat
   }
 
   // Length of Stay Discounts
-  // 7–27 nights: –20%
+  // 7–27 nights: –10% (Updated from 20%)
   // 28+ nights: –40%
   let discountMultiplier = 1;
   let discountLabel = '';
@@ -117,8 +118,8 @@ export const calculateTripPricing = (propertyId: string, startDate: Date, endDat
     discountMultiplier = 0.60;
     discountLabel = 'Monthly Discount (40%)';
   } else if (nights >= 7) {
-    discountMultiplier = 0.80;
-    discountLabel = 'Weekly Discount (20%)';
+    discountMultiplier = 0.90;
+    discountLabel = 'Weekly Discount (10%)';
   }
 
   const finalTotal = subtotal * discountMultiplier;
