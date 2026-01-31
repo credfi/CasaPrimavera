@@ -30,8 +30,7 @@ import {
   Maximize,
   MinusCircle,
   Loader2,
-  Info,
-  RefreshCw
+  Info
 } from 'lucide-react';
 import { formatDate, toISODate } from './utils/dateUtils';
 
@@ -40,7 +39,6 @@ function App() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   
   const [properties, setProperties] = useState<Property[]>(PROPERTIES);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [searchDateRange, setSearchDateRange] = useState<DateRange>({ startDate: null, endDate: null });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -184,7 +182,6 @@ function App() {
 
   useEffect(() => {
     const syncCalendars = async () => {
-      setIsSyncing(true);
       try {
         const updatedProperties = await Promise.all(
           PROPERTIES.map(async (p) => {
@@ -200,8 +197,6 @@ function App() {
         setProperties(updatedProperties);
       } catch (err) {
         console.error("Critical error syncing calendars:", err);
-      } finally {
-        setIsSyncing(false);
       }
     };
     syncCalendars();
@@ -503,21 +498,13 @@ function App() {
                           selectedEnd={searchDateRange.endDate} 
                           onSelectDate={handleDateSelect} 
                         />
-                        <div className="p-4 border-t border-gray-50 flex justify-between items-center bg-gray-50/50 rounded-b-xl">
-                          <span className="text-xs text-gray-400 font-medium italic flex items-center gap-2">
-                             {isSyncing ? <><Loader2 className="animate-spin w-3 h-3" /> Updating availability...</> : "Dates synced with Airbnb"}
-                          </span>
+                        <div className="p-4 border-t border-gray-50 flex justify-end bg-gray-50/50 rounded-b-xl">
                            <button onClick={(e) => { e.stopPropagation(); setShowDatePicker(false); }} className="text-sm bg-brand-dark text-white px-6 py-2 rounded-lg font-medium hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20">Close</button>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-                {isSyncing && (
-                  <div className="mt-4 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 border border-white/20 animate-pulse">
-                    <RefreshCw size={12} className="animate-spin" /> Live Syncing Availability
-                  </div>
-                )}
               </div>
             </div>
 
@@ -528,7 +515,7 @@ function App() {
                   <p className="text-gray-500 max-w-xl">Explore our 10 unique boho suites across three distinct room types. All properties are located in the peaceful South Side and priced in USD for your convenience.</p>
                 </div>
                 <div className="hidden md:block text-sm text-gray-400">
-                   {isSyncing ? "Syncing real-time availability..." : `Showing ${filteredProperties.length} boutique stays`}
+                   {`Showing ${filteredProperties.length} boutique stays`}
                 </div>
               </div>
               {filteredProperties.length > 0 ? (
@@ -569,7 +556,7 @@ function App() {
         {view === 'LOCATION' && <LocationView />}
         {view === 'RECOMMENDATIONS' && <RecommendationsView />}
         {view === 'FAQ' && <FAQView onContactClick={() => handleNavigate('BOOKING')} />}
-        {view === 'BOOKING' && <BookingView onNavigateToGuide={() => handleNavigate('RECOMMENDATIONS')} />}
+        {view === 'BOOKING' && <BookingView onNavigateToGuide={() => handleNavigate('RECOMMENDATIONS')} unavailableDates={aggregateBlockedDates} />}
         {view === 'DETAILS' && selectedProperty && (
           <div className="animate-fade-in pb-20">
             <div className="relative h-[60vh] cursor-pointer group overflow-hidden touch-pan-y" onClick={() => openGallery(heroImageIndex)} onTouchStart={onHeroTouchStart} onTouchMove={onHeroTouchMove} onTouchEnd={onHeroTouchEnd}>

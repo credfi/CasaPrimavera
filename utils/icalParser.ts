@@ -1,10 +1,14 @@
 
 import { toISODate, addDays } from './dateUtils';
 
-// Parse a single date string from ICS format (YYYYMMDD)
+/**
+ * Parses a date string from an ICS file.
+ * Handles both standard YYYYMMDDTHHMMSSZ and manual block YYYYMMDD formats.
+ */
 const parseIcalDate = (dateStr: string): Date | null => {
   if (!dateStr) return null;
-  const cleanStr = dateStr.replace(/[^0-9T]/g, '');
+  // Strip all non-numeric characters to get YYYYMMDD
+  const cleanStr = dateStr.replace(/[^0-9]/g, '');
   if (cleanStr.length < 8) return null;
   
   const year = parseInt(cleanStr.substring(0, 4), 10);
@@ -17,10 +21,13 @@ const parseIcalDate = (dateStr: string): Date | null => {
 const fetchWithProxy = async (url: string, proxyUrlBuilder: (url: string) => string): Promise<string> => {
   const proxyUrl = proxyUrlBuilder(url);
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per proxy
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
   try {
-    const response = await fetch(proxyUrl, { signal: controller.signal });
+    const response = await fetch(proxyUrl, { 
+      signal: controller.signal,
+      headers: { 'Accept': 'text/calendar, text/plain, */*' }
+    });
     clearTimeout(timeoutId);
     if (!response.ok) throw new Error(`Status ${response.status}`);
     return await response.text();
@@ -32,13 +39,14 @@ const fetchWithProxy = async (url: string, proxyUrlBuilder: (url: string) => str
 
 export const fetchAndParseIcal = async (url: string): Promise<string[]> => {
   let data = '';
-  const buster = `cacheBust=${Date.now()}`;
+  const buster = `cb=${Date.now()}`;
   const urlWithBuster = url.includes('?') ? `${url}&${buster}` : `${url}?${buster}`;
   
+  // Rotating proxies to avoid domain blocks on production
   const proxies = [
-    (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
     (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u: string) => `https://thingproxy.freeboard.io/fetch/${u}` // Third fallback
+    (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    (u: string) => `https://thingproxy.freeboard.io/fetch/${u}`
   ];
 
   let success = false;
@@ -50,12 +58,12 @@ export const fetchAndParseIcal = async (url: string): Promise<string[]> => {
         break;
       }
     } catch (err) {
-      console.warn(`Proxy failed, trying next...`, err);
+      console.warn(`Proxy attempt failed, trying next...`);
     }
   }
 
   if (!success) {
-    console.error('All proxies failed to fetch calendar for:', url);
+    console.error('All proxies failed to fetch calendar data.');
     return [];
   }
 
@@ -68,6 +76,7 @@ export const fetchAndParseIcal = async (url: string): Promise<string[]> => {
 
     for (const line of lines) {
       const trimmedLine = line.trim();
+      
       if (trimmedLine.startsWith('BEGIN:VEVENT')) {
         inEvent = true;
         startStr = null;
@@ -79,6 +88,7 @@ export const fetchAndParseIcal = async (url: string): Promise<string[]> => {
           const endDate = parseIcalDate(endStr);
           if (startDate && endDate) {
             let current = new Date(startDate);
+            // iCal end dates are exclusive, so we loop up to but not including the end date
             while (current < endDate) {
               blockedDates.add(toISODate(current));
               current = addDays(current, 1);
@@ -86,15 +96,17 @@ export const fetchAndParseIcal = async (url: string): Promise<string[]> => {
           }
         }
       } else if (inEvent) {
+        // Robust regex to capture dates even with parameters like ;VALUE=DATE
         const startMatch = trimmedLine.match(/^DTSTART.*:(.*)$/);
         if (startMatch) startStr = startMatch[1].trim();
+        
         const endMatch = trimmedLine.match(/^DTEND.*:(.*)$/);
         if (endMatch) endStr = endMatch[1].trim();
       }
     }
     return Array.from(blockedDates);
   } catch (error) {
-    console.error('Error parsing calendar data:', error);
+    console.error('Error parsing iCal:', error);
     return [];
   }
 };

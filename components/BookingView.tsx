@@ -6,9 +6,10 @@ import { formatDate } from '../utils/dateUtils';
 
 interface BookingViewProps {
   onNavigateToGuide: () => void;
+  unavailableDates?: string[]; // New prop for availability sync
 }
 
-export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) => {
+export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide, unavailableDates = [] }) => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -54,11 +55,9 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
         newRange = { ...dateRange, endDate: date };
         isSelectionComplete = true;
       } else {
-        // Clicked before start date, treat as new start date
         newRange = { startDate: date, endDate: null };
       }
     } else {
-      // No start date OR both dates exist (reset)
       newRange = { startDate: date, endDate: null };
     }
 
@@ -83,18 +82,15 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Standardized Payload
     const payload = {
       formType: 'General Booking Request',
       name: formData.name,
       email: formData.email,
       phone: formData.phone.replace('+', ''),
-      // Ensure guests is numeric to prevent 500 errors if column is Number type
       guests: formData.guests.replace('+', ''), 
       checkIn: dateRange.startDate ? formatDate(dateRange.startDate) : 'Not specified',
       checkOut: dateRange.endDate ? formatDate(dateRange.endDate) : 'Not specified',
       interest: formData.roomPreference || 'No Preference',
-      // Send '0' instead of text 'Pending Quote' to strictly satisfy Numeric column types
       estimatedTotal: '0',
       message: formData.message
     };
@@ -111,7 +107,6 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
 
       if (response.ok) {
         setBookingSuccess(true);
-        // Reset form
         setFormData({ name: '', email: '', phone: '', guests: '1', roomPreference: '', message: '' });
         setDateRange({ startDate: null, endDate: null });
       } else {
@@ -130,7 +125,6 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
 
   return (
     <div className="animate-fade-in bg-white min-h-screen">
-       {/* Hero Section */}
        <div className="bg-brand-dark py-20 text-center text-white relative overflow-hidden h-[40vh] flex items-center justify-center">
           <img 
             src="https://raw.githubusercontent.com/credfi/CasaPrimavera/jacob-dev/Images/49-skull2.jpg" 
@@ -146,7 +140,6 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
        </div>
 
        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* The Form */}
           <div className="bg-white rounded-2xl shadow-xl border border-brand-sand p-8 md:p-12 relative">
                {bookingSuccess ? (
                   <div className="text-center py-12">
@@ -174,7 +167,6 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
                       </div>
                       
                       <div className="space-y-6 mb-8">
-                          {/* Custom Date Picker Section */}
                           <div className="relative" ref={datePickerRef}>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Dates</label>
                             <div 
@@ -200,7 +192,6 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
                                   {dateRange.endDate ? formatDate(dateRange.endDate) : 'Select Date'}
                                 </div>
 
-                                {/* Clear Button */}
                                 {(dateRange.startDate || dateRange.endDate) && (
                                   <button 
                                     onClick={clearDates}
@@ -213,12 +204,11 @@ export const BookingView: React.FC<BookingViewProps> = ({ onNavigateToGuide }) =
                               </div>
                             </div>
 
-                            {/* Calendar Popup */}
                             {showDatePicker && (
                               <div className="absolute top-full left-0 right-0 mt-2 z-20 flex justify-center">
                                 <div className="bg-white rounded-xl shadow-2xl p-2 border border-gray-100 w-full md:w-auto">
                                   <Calendar 
-                                    unavailableDates={[]} 
+                                    unavailableDates={unavailableDates} 
                                     selectedStart={dateRange.startDate}
                                     selectedEnd={dateRange.endDate}
                                     onSelectDate={handleDateSelect}
