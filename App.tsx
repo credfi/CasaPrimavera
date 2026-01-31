@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { PROPERTIES, AMENITIES_LIST } from './constants';
 import { Property, DateRange, View } from './types';
 import { PropertyCard } from './components/PropertyCard';
@@ -30,7 +30,8 @@ import {
   Maximize,
   MinusCircle,
   Loader2,
-  Info
+  Info,
+  RefreshCw
 } from 'lucide-react';
 import { formatDate, toISODate } from './utils/dateUtils';
 
@@ -39,6 +40,7 @@ function App() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   
   const [properties, setProperties] = useState<Property[]>(PROPERTIES);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [searchDateRange, setSearchDateRange] = useState<DateRange>({ startDate: null, endDate: null });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +71,21 @@ function App() {
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [heroTouchStart, setHeroTouchStart] = useState<number | null>(null);
   const [heroTouchEnd, setHeroTouchEnd] = useState<number | null>(null);
+
+  // Compute aggregate blocked dates (if ALL rooms are blocked, the date is blocked on home page)
+  const aggregateBlockedDates = useMemo(() => {
+    if (properties.length === 0) return [];
+    
+    const blockCounts: Record<string, number> = {};
+    properties.forEach(p => {
+      p.unavailableDates.forEach(date => {
+        blockCounts[date] = (blockCounts[date] || 0) + 1;
+      });
+    });
+
+    // Only block a date on the home search if EVERY property is occupied
+    return Object.keys(blockCounts).filter(date => blockCounts[date] >= properties.length);
+  }, [properties]);
 
   // SEO Dynamic Metadata Management
   useEffect(() => {
@@ -167,18 +184,25 @@ function App() {
 
   useEffect(() => {
     const syncCalendars = async () => {
-      const updatedProperties = await Promise.all(
-        PROPERTIES.map(async (p) => {
-          if (p.calendarUrl) {
-            const unavailableDates = await fetchAndParseIcal(p.calendarUrl);
-            if (unavailableDates.length > 0) {
-              return { ...p, unavailableDates: [...p.unavailableDates, ...unavailableDates] };
+      setIsSyncing(true);
+      try {
+        const updatedProperties = await Promise.all(
+          PROPERTIES.map(async (p) => {
+            if (p.calendarUrl) {
+              const unavailableDates = await fetchAndParseIcal(p.calendarUrl);
+              if (unavailableDates.length > 0) {
+                return { ...p, unavailableDates: [...p.unavailableDates, ...unavailableDates] };
+              }
             }
-          }
-          return p;
-        })
-      );
-      setProperties(updatedProperties);
+            return p;
+          })
+        );
+        setProperties(updatedProperties);
+      } catch (err) {
+        console.error("Critical error syncing calendars:", err);
+      } finally {
+        setIsSyncing(false);
+      }
     };
     syncCalendars();
   }, []);
@@ -190,9 +214,6 @@ function App() {
        const endIso = toISODate(activeFilters.dateRange.endDate);
 
        result = result.filter(p => {
-         // Check if property has any unavailable dates within the selected range
-         // We use string comparison: blockedIso >= startIso && blockedIso < endIso
-         // (A block on the check-out day is not a conflict for the night before)
          const hasConflict = p.unavailableDates.some(blockedIso => {
             return blockedIso >= startIso && blockedIso < endIso;
          });
@@ -476,15 +497,27 @@ function App() {
                   {showDatePicker && (
                     <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-3xl shadow-xl p-2 z-[60] w-full md:w-auto animate-fade-in border border-gray-100 mx-auto flex justify-center">
                       <div className="w-full max-w-md">
-                        <Calendar unavailableDates={[]} selectedStart={searchDateRange.startDate} selectedEnd={searchDateRange.endDate} onSelectDate={handleDateSelect} />
+                        <Calendar 
+                          unavailableDates={aggregateBlockedDates} 
+                          selectedStart={searchDateRange.startDate} 
+                          selectedEnd={searchDateRange.endDate} 
+                          onSelectDate={handleDateSelect} 
+                        />
                         <div className="p-4 border-t border-gray-50 flex justify-between items-center bg-gray-50/50 rounded-b-xl">
-                          <span className="text-xs text-gray-400 font-medium italic">Select check-in and check-out dates (All prices in USD)</span>
+                          <span className="text-xs text-gray-400 font-medium italic flex items-center gap-2">
+                             {isSyncing ? <><Loader2 className="animate-spin w-3 h-3" /> Updating availability...</> : "Dates synced with Airbnb"}
+                          </span>
                            <button onClick={(e) => { e.stopPropagation(); setShowDatePicker(false); }} className="text-sm bg-brand-dark text-white px-6 py-2 rounded-lg font-medium hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20">Close</button>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
+                {isSyncing && (
+                  <div className="mt-4 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 border border-white/20 animate-pulse">
+                    <RefreshCw size={12} className="animate-spin" /> Live Syncing Availability
+                  </div>
+                )}
               </div>
             </div>
 
@@ -494,7 +527,9 @@ function App() {
                   <h3 className="text-3xl font-serif font-bold text-brand-dark mb-3">Our Boho Collection</h3>
                   <p className="text-gray-500 max-w-xl">Explore our 10 unique boho suites across three distinct room types. All properties are located in the peaceful South Side and priced in USD for your convenience.</p>
                 </div>
-                <div className="hidden md:block text-sm text-gray-400">Showing {filteredProperties.length} boutique stays</div>
+                <div className="hidden md:block text-sm text-gray-400">
+                   {isSyncing ? "Syncing real-time availability..." : `Showing ${filteredProperties.length} boutique stays`}
+                </div>
               </div>
               {filteredProperties.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
