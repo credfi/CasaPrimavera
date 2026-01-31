@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PROPERTIES, AMENITIES_LIST } from './constants';
 import { Property, DateRange, View } from './types';
 import { PropertyCard } from './components/PropertyCard';
@@ -69,21 +69,6 @@ function App() {
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [heroTouchStart, setHeroTouchStart] = useState<number | null>(null);
   const [heroTouchEnd, setHeroTouchEnd] = useState<number | null>(null);
-
-  // Compute aggregate blocked dates (if ALL rooms are blocked, the date is blocked on home page)
-  const aggregateBlockedDates = useMemo(() => {
-    if (properties.length === 0) return [];
-    
-    const blockCounts: Record<string, number> = {};
-    properties.forEach(p => {
-      p.unavailableDates.forEach(date => {
-        blockCounts[date] = (blockCounts[date] || 0) + 1;
-      });
-    });
-
-    // Only block a date on the home search if EVERY property is occupied
-    return Object.keys(blockCounts).filter(date => blockCounts[date] >= properties.length);
-  }, [properties]);
 
   // SEO Dynamic Metadata Management
   useEffect(() => {
@@ -182,22 +167,18 @@ function App() {
 
   useEffect(() => {
     const syncCalendars = async () => {
-      try {
-        const updatedProperties = await Promise.all(
-          PROPERTIES.map(async (p) => {
-            if (p.calendarUrl) {
-              const unavailableDates = await fetchAndParseIcal(p.calendarUrl);
-              if (unavailableDates.length > 0) {
-                return { ...p, unavailableDates: [...p.unavailableDates, ...unavailableDates] };
-              }
+      const updatedProperties = await Promise.all(
+        PROPERTIES.map(async (p) => {
+          if (p.calendarUrl) {
+            const unavailableDates = await fetchAndParseIcal(p.calendarUrl);
+            if (unavailableDates.length > 0) {
+              return { ...p, unavailableDates: [...p.unavailableDates, ...unavailableDates] };
             }
-            return p;
-          })
-        );
-        setProperties(updatedProperties);
-      } catch (err) {
-        console.error("Critical error syncing calendars:", err);
-      }
+          }
+          return p;
+        })
+      );
+      setProperties(updatedProperties);
     };
     syncCalendars();
   }, []);
@@ -209,6 +190,9 @@ function App() {
        const endIso = toISODate(activeFilters.dateRange.endDate);
 
        result = result.filter(p => {
+         // Check if property has any unavailable dates within the selected range
+         // We use string comparison: blockedIso >= startIso && blockedIso < endIso
+         // (A block on the check-out day is not a conflict for the night before)
          const hasConflict = p.unavailableDates.some(blockedIso => {
             return blockedIso >= startIso && blockedIso < endIso;
          });
@@ -492,13 +476,9 @@ function App() {
                   {showDatePicker && (
                     <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-3xl shadow-xl p-2 z-[60] w-full md:w-auto animate-fade-in border border-gray-100 mx-auto flex justify-center">
                       <div className="w-full max-w-md">
-                        <Calendar 
-                          unavailableDates={aggregateBlockedDates} 
-                          selectedStart={searchDateRange.startDate} 
-                          selectedEnd={searchDateRange.endDate} 
-                          onSelectDate={handleDateSelect} 
-                        />
-                        <div className="p-4 border-t border-gray-50 flex justify-end bg-gray-50/50 rounded-b-xl">
+                        <Calendar unavailableDates={[]} selectedStart={searchDateRange.startDate} selectedEnd={searchDateRange.endDate} onSelectDate={handleDateSelect} />
+                        <div className="p-4 border-t border-gray-50 flex justify-between items-center bg-gray-50/50 rounded-b-xl">
+                          <span className="text-xs text-gray-400 font-medium italic">Select check-in and check-out dates (All prices in USD)</span>
                            <button onClick={(e) => { e.stopPropagation(); setShowDatePicker(false); }} className="text-sm bg-brand-dark text-white px-6 py-2 rounded-lg font-medium hover:bg-brand-clay transition-colors shadow-lg shadow-brand-dark/20">Close</button>
                         </div>
                       </div>
@@ -514,9 +494,7 @@ function App() {
                   <h3 className="text-3xl font-serif font-bold text-brand-dark mb-3">Our Boho Collection</h3>
                   <p className="text-gray-500 max-w-xl">Explore our 10 unique boho suites across three distinct room types. All properties are located in the peaceful South Side and priced in USD for your convenience.</p>
                 </div>
-                <div className="hidden md:block text-sm text-gray-400">
-                   {`Showing ${filteredProperties.length} boutique stays`}
-                </div>
+                <div className="hidden md:block text-sm text-gray-400">Showing {filteredProperties.length} boutique stays</div>
               </div>
               {filteredProperties.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -556,7 +534,7 @@ function App() {
         {view === 'LOCATION' && <LocationView />}
         {view === 'RECOMMENDATIONS' && <RecommendationsView />}
         {view === 'FAQ' && <FAQView onContactClick={() => handleNavigate('BOOKING')} />}
-        {view === 'BOOKING' && <BookingView onNavigateToGuide={() => handleNavigate('RECOMMENDATIONS')} unavailableDates={aggregateBlockedDates} />}
+        {view === 'BOOKING' && <BookingView onNavigateToGuide={() => handleNavigate('RECOMMENDATIONS')} />}
         {view === 'DETAILS' && selectedProperty && (
           <div className="animate-fade-in pb-20">
             <div className="relative h-[60vh] cursor-pointer group overflow-hidden touch-pan-y" onClick={() => openGallery(heroImageIndex)} onTouchStart={onHeroTouchStart} onTouchMove={onHeroTouchMove} onTouchEnd={onHeroTouchEnd}>
@@ -643,7 +621,7 @@ function App() {
                         <div className="mt-6 flex flex-col items-center justify-center space-y-1 text-sm bg-brand-sand/30 p-4 rounded-xl border border-brand-sand/50">
                            <div className="font-bold text-brand-dark flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-brand-clay"></span>Direct Booking & Long Stay Discounts</div>
                            <div className="text-gray-600 flex gap-4">
-                              <span>7+ Nights: <span className="text-brand-clay font-bold">10% OFF</span></span>
+                              <span>7+ Nights: <span className="text-brand-clay font-bold">20% OFF</span></span>
                               <span>28+ Nights: <span className="text-brand-clay font-bold">40% OFF</span></span>
                            </div>
                         </div>
