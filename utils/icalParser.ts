@@ -1,100 +1,144 @@
-
 import { toISODate, addDays } from './dateUtils';
 
-// Parse a single date string from ICS format (YYYYMMDD)
-// Handles both YYYYMMDD and YYYYMMDDTHHMMSSZ formats
-const parseIcalDate = (dateStr: string): Date | null => {
-  if (!dateStr) return null;
-  // Clean up the string - keep only digits for the initial YYYYMMDD check
-  const cleanStr = dateStr.replace(/[^0-9T]/g, '');
+/**
+ * Robustly parses a date string from an iCal file.
+ * Handles YYYYMMDD, YYYYMMDDTHHMMSSZ, and lines with parameters (VALUE=DATE, TZID).
+ */
+const parseIcalDate = (line: string): Date | null => {
+  if (!line) return null;
+  
+  // Extract the part after the colon
+  const parts = line.split(':');
+  if (parts.length < 2) return null;
+  
+  const dateValue = parts[parts.length - 1].trim();
+  // Extract just the numeric part (e.g., 20241225 from 20241225T120000Z)
+  const cleanStr = dateValue.replace(/[^0-9]/g, '');
   if (cleanStr.length < 8) return null;
   
   const year = parseInt(cleanStr.substring(0, 4), 10);
-  const month = parseInt(cleanStr.substring(4, 6), 10) - 1; // JS months are 0-indexed
+  const month = parseInt(cleanStr.substring(4, 6), 10) - 1;
   const day = parseInt(cleanStr.substring(6, 8), 10);
   
-  // Return a Date object at local midnight to ensure consistent comparison
   return new Date(year, month, day, 0, 0, 0);
 };
 
-const fetchWithProxy = async (url: string, proxyUrlBuilder: (url: string) => string): Promise<string> => {
-  const proxyUrl = proxyUrlBuilder(url);
-  const response = await fetch(proxyUrl);
-  if (!response.ok) {
-    throw new Error(`Status ${response.status}`);
+/**
+ * Handles iCal line folding where lines starting with a space are continuations.
+ */
+const unwindIcal = (data: string): string[] => {
+  const lines = data.split(/\r\n|\n|\r/);
+  const unwound: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith(' ') || line.startsWith('\t')) {
+      if (unwound.length > 0) {
+        unwound[unwound.length - 1] += line.substring(1);
+      }
+    } else {
+      unwound.push(line);
+    }
   }
-  return await response.text();
+  return unwound;
+};
+
+const fetchCalendarData = async (url: string): Promise<string> => {
+  const buster = `t=${Date.now()}`;
+  const urlWithBuster = url.includes('?') ? `${url}&${buster}` : `${url}?${buster}`;
+  
+  // Header often required by some proxies
+  const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+
+  const strategies = [
+    // Strategy 1: Internal Proxy (Netlify) - Try without buster first to avoid signature issues
+    async () => {
+      const response = await fetch(`/proxy/${url}`, { headers });
+      if (!response.ok) throw new Error(`Netlify Proxy failed: ${response.status}`);
+      return await response.text();
+    },
+    // Strategy 2: Internal Proxy (Netlify) - With buster if needed
+    async () => {
+      const response = await fetch(`/proxy/${urlWithBuster}`, { headers });
+      if (!response.ok) throw new Error(`Netlify Proxy (Buster) failed: ${response.status}`);
+      return await response.text();
+    },
+    // Strategy 3: CORSProxy.io (Reliable for Airbnb)
+    async () => {
+      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { headers });
+      if (!response.ok) throw new Error('CORSProxy failed');
+      return await response.text();
+    },
+    // Strategy 4: AllOrigins
+    async () => {
+      const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, { headers });
+      if (!response.ok) throw new Error('AllOrigins failed');
+      return await response.text();
+    },
+    // Strategy 5: CodeTabs (Good fallback)
+    async () => {
+      const response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { headers });
+      if (!response.ok) throw new Error('CodeTabs failed');
+      return await response.text();
+    }
+  ];
+
+  let lastError = null;
+  for (const strategy of strategies) {
+    try {
+      const text = await strategy();
+      if (text && (text.includes('BEGIN:VCALENDAR') || text.includes('BEGIN:VEVENT'))) {
+        return text;
+      }
+    } catch (e) {
+      lastError = e;
+      console.warn(`Calendar fetch strategy failed:`, e);
+    }
+  }
+  
+  throw lastError || new Error('All calendar fetch strategies failed');
 };
 
 export const fetchAndParseIcal = async (url: string): Promise<string[]> => {
-  let data = '';
-  
-  // Cache Buster: Appends a unique timestamp to the Airbnb URL
-  // This forces proxies like corsproxy.io to fetch a fresh version instead of a stale cached one.
-  const buster = `cacheBust=${Date.now()}`;
-  const urlWithBuster = url.includes('?') ? `${url}&${buster}` : `${url}?${buster}`;
-  
   try {
-    // Strategy 1: corsproxy.io (Primary)
-    data = await fetchWithProxy(urlWithBuster, (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`);
-  } catch (err1) {
-    try {
-      // Strategy 2: allorigins.win (Backup)
-      data = await fetchWithProxy(urlWithBuster, (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`);
-    } catch (err2) {
-      console.error('All calendar fetch proxies failed:', err2);
-      return [];
-    }
-  }
-
-  try {
+    const data = await fetchCalendarData(url);
     const blockedDates: Set<string> = new Set();
+    const lines = unwindIcal(data);
     
-    // Normalize line endings
-    const lines = data.split(/\r\n|\n|\r/);
+    let currentEvent: { start: string | null; end: string | null } = { start: null, end: null };
     let inEvent = false;
-    let startStr: string | null = null;
-    let endStr: string | null = null;
 
     for (const line of lines) {
-      const trimmedLine = line.trim();
+      const upperLine = line.trim().toUpperCase();
       
-      if (trimmedLine.startsWith('BEGIN:VEVENT')) {
+      if (upperLine.startsWith('BEGIN:VEVENT')) {
         inEvent = true;
-        startStr = null;
-        endStr = null;
-      } else if (trimmedLine.startsWith('END:VEVENT')) {
+        currentEvent = { start: null, end: null };
+      } else if (upperLine.startsWith('END:VEVENT')) {
         inEvent = false;
-        
-        if (startStr && endStr) {
-          const startDate = parseIcalDate(startStr);
-          const endDate = parseIcalDate(endStr);
-          
+        if (currentEvent.start && currentEvent.end) {
+          const startDate = parseIcalDate(currentEvent.start);
+          const endDate = parseIcalDate(currentEvent.end);
           if (startDate && endDate) {
-            let current = new Date(startDate);
-            // Iterate from start date up to (but not including) end date
-            // This is the standard iCal behavior: end date is the checkout day
-            while (current < endDate) {
-              blockedDates.add(toISODate(current));
-              current = addDays(current, 1);
+            let curr = new Date(startDate);
+            // End date is exclusive in iCal (checkout day)
+            while (curr < endDate) {
+              blockedDates.add(toISODate(curr));
+              curr = addDays(curr, 1);
             }
           }
         }
       } else if (inEvent) {
-        // Robust Regex Parsing:
-        // Handles variations like DTSTART:20250101 and DTSTART;VALUE=DATE:20250101
-        // which Airbnb uses interchangeably for Reserved vs Blocked dates.
-        const startMatch = trimmedLine.match(/^DTSTART.*:(.*)$/);
-        if (startMatch) startStr = startMatch[1].trim();
-        
-        const endMatch = trimmedLine.match(/^DTEND.*:(.*)$/);
-        if (endMatch) endStr = endMatch[1].trim();
+        // Broad matches to catch DTSTART;VALUE=DATE:20241225 etc.
+        if (upperLine.startsWith('DTSTART')) {
+          currentEvent.start = line.trim();
+        } else if (upperLine.startsWith('DTEND')) {
+          currentEvent.end = line.trim();
+        }
       }
     }
     
     return Array.from(blockedDates);
   } catch (error) {
-    console.error('Error parsing calendar data:', error);
+    console.error(`Final attempt calendar sync failed for ${url}:`, error);
     return [];
   }
 };
