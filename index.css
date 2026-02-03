@@ -1,0 +1,6 @@
+
+/* This file satisfies the browser's request for index.css and prevents 404 errors. */
+body {
+  margin: 0;
+  padding: 0;
+}
