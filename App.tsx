@@ -343,6 +343,15 @@ function App() {
       });
       if (response.ok) {
         setBookingSuccess(true);
+        
+        // Google Ads Conversion Tracking
+        if (typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', 'conversion', {
+            'send_to': 'AW-18144544171/CDMaCJvow6gcEKuL_8tD',
+            'value': 1.0,
+            'currency': 'MXN'
+          });
+        }
       } else {
         if (response.status === 404 || response.status === 500) {
           throw new Error("Make.com Scenario Error: The scenario is likely stopped/offline.");
