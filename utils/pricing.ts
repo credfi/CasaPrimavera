@@ -1,6 +1,6 @@
 import { Property } from '../types';
 
-// Constants
+// Updated Pricing Rules (2026-2027 Season)
 const HIGH_SEASON_START_MONTH = 9; // October (0-indexed)
 const HIGH_SEASON_START_DAY = 27;
 const HIGH_SEASON_END_MONTH = 3; // April (0-indexed)
@@ -22,6 +22,46 @@ const HOLIDAYS = [
 const TIER_1_IDS = ['1', '2', '3'];
 const TIER_2_IDS = ['4', '9'];
 const TIER_3_IDS = ['5', '6', '7', '8', '10'];
+
+// Specific holiday fixed pricing
+// Dec 22–23, Dec 24–30, Dec 31, Jan 1
+const getSpecificHolidayPrice = (propertyId: string, date: Date): number | null => {
+  const month = date.getMonth(); // 0-indexed: 0 = Jan, 11 = Dec
+  const day = date.getDate();
+
+  const isTier1 = TIER_1_IDS.includes(propertyId);
+  const isTier2 = TIER_2_IDS.includes(propertyId);
+
+  // Dec 22–23
+  if (month === 11 && (day === 22 || day === 23)) {
+    if (isTier1) return 84;
+    if (isTier2) return 57;
+    return 79;
+  }
+
+  // Dec 24–30
+  if (month === 11 && day >= 24 && day <= 30) {
+    if (isTier1) return 84;
+    if (isTier2) return 61;
+    return 79;
+  }
+
+  // Dec 31
+  if (month === 11 && day === 31) {
+    if (isTier1) return 127;
+    if (isTier2) return 110;
+    return 127;
+  }
+
+  // Jan 1
+  if (month === 0 && day === 1) {
+    if (isTier1) return 84;
+    if (isTier2) return 61;
+    return 79;
+  }
+
+  return null;
+};
 
 const getBasePrice = (propertyId: string, date: Date): number => {
   const month = date.getMonth();
@@ -47,9 +87,10 @@ const getBasePrice = (propertyId: string, date: Date): number => {
   }
 
   if (isHighSeason) {
-    if (TIER_1_IDS.includes(propertyId)) return 50;
-    if (TIER_2_IDS.includes(propertyId)) return 40; // Rooms 4 & 9
-    return 44; // Rooms 5–8 & 10
+    // Increased by $18/night in high season
+    if (TIER_1_IDS.includes(propertyId)) return 68;
+    if (TIER_2_IDS.includes(propertyId)) return 58; // Rooms 4 & 9
+    return 62; // Rooms 5–8 & 10
   } else {
     // Low Season
     if (TIER_1_IDS.includes(propertyId)) return 34;
@@ -59,17 +100,16 @@ const getBasePrice = (propertyId: string, date: Date): number => {
 };
 
 export const getNightlyPrice = (propertyId: string, date: Date): number => {
-  let price = getBasePrice(propertyId, date);
-  const now = new Date();
-  
-  // 1. Weekend Modifier (+10%)
-  // Friday (5) and Saturday (6)
-  const dayOfWeek = date.getDay();
-  if (dayOfWeek === 5 || dayOfWeek === 6) {
-    price = price * 1.10;
+  // Check for specific holiday pricing overrides first
+  const specificHolidayPrice = getSpecificHolidayPrice(propertyId, date);
+  if (specificHolidayPrice !== null) {
+    return specificHolidayPrice;
   }
 
-  // 2. Holiday Modifier (+10%)
+  let price = getBasePrice(propertyId, date);
+  const now = new Date();
+
+  // 1. Holiday Modifier (+10%)
   const dateString = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   if (HOLIDAYS.includes(dateString)) {
     price = price * 1.10;
@@ -108,7 +148,7 @@ export const calculateTripPricing = (propertyId: string, startDate: Date, endDat
   }
 
   // Length of Stay Discounts
-  // 7–27 nights: –20%
+  // 7–27 nights: –10%
   // 28+ nights: –40%
   let discountMultiplier = 1;
   let discountLabel = '';
@@ -117,8 +157,8 @@ export const calculateTripPricing = (propertyId: string, startDate: Date, endDat
     discountMultiplier = 0.60;
     discountLabel = 'Monthly Discount (40%)';
   } else if (nights >= 7) {
-    discountMultiplier = 0.80;
-    discountLabel = 'Weekly Discount (20%)';
+    discountMultiplier = 0.90;
+    discountLabel = 'Weekly Discount (10%)';
   }
 
   const finalTotal = subtotal * discountMultiplier;
